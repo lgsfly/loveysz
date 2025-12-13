@@ -410,33 +410,29 @@
         // ==================== 玩家 ====================
         const player = {
             x: 100,
-            y: 100,
+            y: 480, // 初始位置在地面上
             width: 40,
             height: 60,
             vx: 0,
             vy: 0,
             speed: 4,
             jumpForce: -12,
-            onGround: false,
+            onGround: true,
             invincible: 0,
             direction: 1, // 1=右, -1=左
             weapon: null // 当前持有的武器
         };
 
         // ==================== 玩家头像设置 ====================
-        // 🎨 替换头像方法：
-        // 1. 把图片命名为 avatar.jpg 或 avatar.png，放在与此HTML同一文件夹
-        //    然后修改下面的 src 为: 'avatar.jpg' 或 'avatar.png'
-        // 2. 或者使用在线图片链接，直接替换 src 的内容
-        // 3. 或者保持默认的可爱卡通头像
+        // 🎨 使用真实头像
         const playerAvatar = new Image();
-        playerAvatar.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Ccircle cx="50" cy="50" r="45" fill="%23ffecd2"/%3E%3Ccircle cx="35" cy="45" r="5" fill="%23333"/%3E%3Ccircle cx="65" cy="45" r="5" fill="%23333"/%3E%3Cpath d="M 30 65 Q 50 75 70 65" stroke="%23f5576c" stroke-width="3" fill="none" stroke-linecap="round"/%3E%3Ccircle cx="25" cy="45" r="8" fill="%23ff9999" opacity="0.6"/%3E%3Ccircle cx="75" cy="45" r="8" fill="%23ff9999" opacity="0.6"/%3E%3C/svg%3E';
+        playerAvatar.src = 'avatar.jpg'; // 使用本地头像图片
         
-        // 示例：使用本地图片
-        // playerAvatar.src = 'avatar.jpg';
-        
-        // 示例：使用在线图片
-        // playerAvatar.src = 'https://你的图片链接.com/image.jpg';
+        // 如果图片加载失败，使用默认头像
+        playerAvatar.onerror = function() {
+            console.log('头像加载失败，使用默认头像');
+            this.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Ccircle cx="50" cy="50" r="45" fill="%23ffecd2"/%3E%3Ccircle cx="35" cy="45" r="5" fill="%23333"/%3E%3Ccircle cx="65" cy="45" r="5" fill="%23333"/%3E%3Cpath d="M 30 65 Q 50 75 70 65" stroke="%23f5576c" stroke-width="3" fill="none" stroke-linecap="round"/%3E%3Ccircle cx="25" cy="45" r="8" fill="%23ff9999" opacity="0.6"/%3E%3Ccircle cx="75" cy="45" r="8" fill="%23ff9999" opacity="0.6"/%3E%3C/svg%3E';
+        };
 
         // ==================== 关卡数据 ====================
         let currentLevel = 1;
@@ -587,11 +583,12 @@
             // 重置关卡特定变量
             keyFragments = 0;
             
-            // 重置玩家位置
+            // 重置玩家位置 - 放在地面上
             player.x = 100;
-            player.y = 100;
+            player.y = 480; // 改为在地面上的位置（550 - 60 - 10）
             player.vx = 0;
             player.vy = 0;
+            player.onGround = true;
             game.camera.x = 0;
             
             // 显示关卡描述
@@ -707,6 +704,9 @@
             // 更新位置
             player.x += player.vx;
             player.y += player.vy;
+            
+            // 确保玩家不会在初始化时就掉落
+            if (!platforms || platforms.length === 0) return;
 
             // 碰撞检测 - 平台
             player.onGround = false;
@@ -728,12 +728,12 @@
 
             // 边界检测
             if (player.x < 0) player.x = 0;
-            if (player.x > levels[currentLevel].width - player.width) {
+            if (levels[currentLevel] && player.x > levels[currentLevel].width - player.width) {
                 player.x = levels[currentLevel].width - player.width;
             }
 
-            // 掉落死亡
-            if (player.y > canvas.height) {
+            // 掉落死亡 - 增加容错，只有在游戏真正开始后才判断
+            if (player.y > canvas.height + 100) {
                 takeDamage();
             }
 
@@ -942,9 +942,11 @@
             game.hearts--;
             player.invincible = 60;
             player.x = 100;
-            player.y = 100;
+            player.y = 480; // 重生在地面上
             player.vx = 0;
             player.vy = 0;
+            player.onGround = true;
+            game.camera.x = 0;
             
             if (game.hearts <= 0) {
                 alert('游戏结束！再来一次吧！');
@@ -957,6 +959,11 @@
             // 清空画布
             ctx.fillStyle = '#5c94fc';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 如果游戏还没开始，只显示背景
+            if (game.state === 'start' || !levels[currentLevel]) {
+                return;
+            }
 
             ctx.save();
             ctx.translate(-game.camera.x, 0);
@@ -1140,15 +1147,36 @@
             ctx.stroke();
             
             // 头部（使用图片）
-            if (playerAvatar.complete) {
+            if (playerAvatar.complete && playerAvatar.naturalWidth > 0) {
                 ctx.save();
+                
+                // 绘制圆形头像
+                const avatarSize = headSize * 2.2; // 稍微大一点的头像
+                const avatarX = centerX;
+                const avatarY = y + headSize;
+                
+                // 创建圆形裁剪区域
+                ctx.beginPath();
+                ctx.arc(avatarX, avatarY, headSize, 0, Math.PI * 2);
+                ctx.closePath();
+                ctx.clip();
+                
+                // 绘制头像（居中）
                 if (dir === -1) {
                     ctx.scale(-1, 1);
-                    ctx.drawImage(playerAvatar, -(x + w/2 + headSize), y, headSize * 2, headSize * 2);
+                    ctx.drawImage(playerAvatar, -avatarX - headSize, avatarY - headSize, avatarSize, avatarSize);
                 } else {
-                    ctx.drawImage(playerAvatar, x + w/2 - headSize, y, headSize * 2, headSize * 2);
+                    ctx.drawImage(playerAvatar, avatarX - headSize, avatarY - headSize, avatarSize, avatarSize);
                 }
+                
                 ctx.restore();
+                
+                // 绘制头像边框
+                ctx.strokeStyle = '#FF69B4';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(avatarX, avatarY, headSize, 0, Math.PI * 2);
+                ctx.stroke();
             } else {
                 // 备用圆形头部
                 ctx.fillStyle = '#FFB6C1';
