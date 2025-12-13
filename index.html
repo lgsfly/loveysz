@@ -1,0 +1,1540 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>💝 生日大冒险 - 马里奥风格</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', 'Press Start 2P', Arial, sans-serif;
+            background: #5c94fc;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        #game-canvas {
+            display: block;
+            margin: 0 auto;
+            background: #5c94fc;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+        }
+
+        /* UI 覆盖层 */
+        .ui-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        /* 顶部HUD */
+        .hud {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            color: white;
+            font-size: 16px;
+            text-shadow: 2px 2px 0 #000;
+            font-weight: bold;
+        }
+
+        .hud-item {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 8px 15px;
+            border-radius: 8px;
+            border: 2px solid white;
+        }
+
+        /* 移动控制按钮 */
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            pointer-events: auto;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.8);
+            border: 3px solid #333;
+            border-radius: 50%;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            transition: all 0.1s;
+        }
+
+        .control-btn:active {
+            transform: scale(0.9);
+            background: rgba(255, 255, 255, 1);
+        }
+
+        .jump-btn {
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 107, 107, 0.9);
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .jump-btn:active {
+            background: rgba(255, 107, 107, 1);
+        }
+
+        /* 开始界面 */
+        .start-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            pointer-events: auto;
+        }
+
+        .start-screen.hidden {
+            display: none;
+        }
+
+        .game-title {
+            font-size: 32px;
+            color: white;
+            text-shadow: 4px 4px 0 #000;
+            margin-bottom: 20px;
+            animation: bounce 1s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .start-btn {
+            padding: 20px 50px;
+            font-size: 24px;
+            background: white;
+            border: 4px solid #333;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 6px 0 #333;
+            transition: all 0.1s;
+        }
+
+        .start-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #333;
+        }
+
+        .instructions {
+            margin-top: 30px;
+            color: white;
+            text-align: center;
+            font-size: 14px;
+            line-height: 1.8;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        /* 问答弹窗 */
+        .question-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            border: 4px solid #333;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            max-width: 90%;
+            display: none;
+            pointer-events: auto;
+        }
+
+        .question-modal.active {
+            display: block;
+            animation: popIn 0.3s;
+        }
+
+        @keyframes popIn {
+            0% { transform: translate(-50%, -50%) scale(0); }
+            100% { transform: translate(-50%, -50%) scale(1); }
+        }
+
+        .question-title {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #333;
+            text-align: center;
+        }
+
+        .answer-btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            font-size: 16px;
+            border: 3px solid #333;
+            border-radius: 10px;
+            background: #f093fb;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+        }
+
+        .answer-btn:hover {
+            background: #f5576c;
+        }
+
+        .answer-btn.correct {
+            background: #4CAF50;
+        }
+
+        .answer-btn.wrong {
+            background: #f44336;
+        }
+
+        /* 结局界面 */
+        .ending-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            pointer-events: auto;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .ending-screen.active {
+            display: flex;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .ending-title {
+            font-size: 36px;
+            color: #f5576c;
+            text-shadow: 3px 3px 0 white;
+            margin-bottom: 20px;
+            animation: heartBeat 1.5s infinite;
+        }
+
+        @keyframes heartBeat {
+            0%, 100% { transform: scale(1); }
+            10%, 30% { transform: scale(1.1); }
+        }
+
+        .ending-message {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            border: 4px solid #333;
+            max-width: 500px;
+            text-align: center;
+            line-height: 2;
+            font-size: 16px;
+            margin: 20px 0;
+        }
+
+        .fireworks {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        /* 像素字体样式 */
+        .pixel-text {
+            font-family: monospace;
+            letter-spacing: 2px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 游戏画布 -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- UI 覆盖层 -->
+    <div class="ui-overlay">
+        <!-- HUD -->
+        <div class="hud">
+            <div class="hud-item">💖 <span id="hearts">3</span></div>
+            <div class="hud-item">⭐ <span id="stars">0</span></div>
+            <div class="hud-item" id="weapon-display" style="display: none;">🎁 <span id="weapon-name"></span></div>
+        </div>
+        <div class="hud" style="top: 60px; justify-content: flex-start;">
+            <div class="hud-item" id="fragment-display" style="display: none;">🔑 碎片: <span id="fragments">0</span>/3</div>
+            <div class="hud-item">⏱️ <span id="timer">0</span></div>
+        </div>
+
+        <!-- 移动控制 -->
+        <div class="controls">
+            <div class="control-group">
+                <div class="control-btn" id="btn-left">←</div>
+                <div class="control-btn" id="btn-right">→</div>
+            </div>
+            <div class="control-group">
+                <div class="control-btn jump-btn" id="btn-jump">跳</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 开始界面 -->
+    <div class="start-screen" id="start-screen">
+        <h1 class="game-title pixel-text">🎮 生日大冒险 🎂</h1>
+        <div class="instructions">
+            <p>💝 帮助勇者找到生日礼物！</p>
+            <p>⭐ 收集星星，打败敌人</p>
+            <p>❓ 回答问题获得奖励</p>
+            <p>🐉 击败大BOSS获得祝福</p>
+        </div>
+        <button class="start-btn" onclick="startGame()">开始冒险</button>
+    </div>
+
+    <!-- 问答弹窗 -->
+    <div class="question-modal" id="question-modal">
+        <div class="question-title" id="question-text"></div>
+        <div id="answer-buttons"></div>
+    </div>
+
+    <!-- 结局界面 -->
+    <div class="ending-screen" id="ending-screen">
+        <h1 class="ending-title">🎉 生日快乐 🎉</h1>
+        <div class="ending-message">
+            <p>🎂 亲爱的宝贝 🎂</p>
+            <p style="margin-top: 20px;">在这个特别的日子里，</p>
+            <p>感谢你一直以来的陪伴与支持。</p>
+            <p>你的笑容是我最珍贵的礼物，</p>
+            <p>你的快乐是我最大的心愿。</p>
+            <p style="margin-top: 20px; font-size: 20px; color: #f5576c; font-weight: bold;">
+                愿我们的每一天都如今天般甜蜜！<br>
+                永远爱你！💕
+            </p>
+            <p style="margin-top: 30px;">⭐ 你收集了 <span id="final-stars">0</span> 颗星星！</p>
+        </div>
+        <button class="start-btn" onclick="restartGame()">再玩一次</button>
+        <canvas class="fireworks" id="fireworks-canvas"></canvas>
+    </div>
+
+    <script>
+        // ==================== 游戏配置 ====================
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+
+        // 设置画布大小
+        function resizeCanvas() {
+            const maxWidth = 800;
+            const maxHeight = 600;
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+            
+            if (windowWidth / windowHeight > maxWidth / maxHeight) {
+                canvas.height = Math.min(windowHeight, maxHeight);
+                canvas.width = canvas.height * (maxWidth / maxHeight);
+            } else {
+                canvas.width = Math.min(windowWidth, maxWidth);
+                canvas.height = canvas.width * (maxHeight / maxWidth);
+            }
+        }
+
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // ==================== 游戏状态 ====================
+        const game = {
+            state: 'start', // start, playing, question, boss, ending
+            level: 1,
+            hearts: 3,
+            stars: 0,
+            startTime: 0,
+            camera: { x: 0, y: 0 },
+            gravity: 0.5,
+            keys: {},
+            touchControls: {
+                left: false,
+                right: false,
+                jump: false
+            }
+        };
+
+        // ==================== 玩家 ====================
+        const player = {
+            x: 100,
+            y: 100,
+            width: 40,
+            height: 60,
+            vx: 0,
+            vy: 0,
+            speed: 4,
+            jumpForce: -12,
+            onGround: false,
+            invincible: 0,
+            direction: 1, // 1=右, -1=左
+            weapon: null // 当前持有的武器
+        };
+
+        // ==================== 玩家头像设置 ====================
+        // 🎨 替换头像方法：
+        // 1. 把图片命名为 avatar.jpg 或 avatar.png，放在与此HTML同一文件夹
+        //    然后修改下面的 src 为: 'avatar.jpg' 或 'avatar.png'
+        // 2. 或者使用在线图片链接，直接替换 src 的内容
+        // 3. 或者保持默认的可爱卡通头像
+        const playerAvatar = new Image();
+        playerAvatar.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Ccircle cx="50" cy="50" r="45" fill="%23ffecd2"/%3E%3Ccircle cx="35" cy="45" r="5" fill="%23333"/%3E%3Ccircle cx="65" cy="45" r="5" fill="%23333"/%3E%3Cpath d="M 30 65 Q 50 75 70 65" stroke="%23f5576c" stroke-width="3" fill="none" stroke-linecap="round"/%3E%3Ccircle cx="25" cy="45" r="8" fill="%23ff9999" opacity="0.6"/%3E%3Ccircle cx="75" cy="45" r="8" fill="%23ff9999" opacity="0.6"/%3E%3C/svg%3E';
+        
+        // 示例：使用本地图片
+        // playerAvatar.src = 'avatar.jpg';
+        
+        // 示例：使用在线图片
+        // playerAvatar.src = 'https://你的图片链接.com/image.jpg';
+
+        // ==================== 关卡数据 ====================
+        let currentLevel = 1;
+        const levels = {
+            1: {
+                name: "💖 寻找钥匙碎片",
+                description: "收集3个钥匙碎片，回答问题获得爱之钥匙！",
+                width: 3000,
+                platforms: [
+                    { x: 0, y: 550, width: 3000, height: 50 },
+                    { x: 300, y: 450, width: 200, height: 20 },
+                    { x: 600, y: 380, width: 150, height: 20 },
+                    { x: 900, y: 320, width: 200, height: 20 },
+                    { x: 1200, y: 380, width: 150, height: 20 },
+                    { x: 1500, y: 450, width: 200, height: 20 },
+                    { x: 1800, y: 380, width: 200, height: 20 },
+                    { x: 2100, y: 320, width: 150, height: 20 },
+                    { x: 2400, y: 400, width: 200, height: 20 },
+                ],
+                enemies: [
+                    { x: 500, y: 520, type: 'walk', speed: 0.8 },
+                    { x: 800, y: 520, type: 'walk', speed: 0.8 },
+                    { x: 1300, y: 520, type: 'walk', speed: 0.8 },
+                    { x: 1900, y: 520, type: 'walk', speed: 0.8 },
+                    { x: 2500, y: 520, type: 'walk', speed: 0.8 },
+                ],
+                items: [
+                    { x: 650, y: 320, type: 'keyFragment' },
+                    { x: 1250, y: 320, type: 'keyFragment' },
+                    { x: 2150, y: 260, type: 'keyFragment' },
+                    { x: 400, y: 400, type: 'star' },
+                    { x: 950, y: 260, type: 'star' },
+                    { x: 1550, y: 390, type: 'star' },
+                    { x: 1850, y: 320, type: 'star' },
+                ],
+                questionBox: { x: 2700, y: 330, asked: false, needsFragments: 3 },
+                goal: { x: 2850, y: 480 },
+                specialMechanic: "收集钥匙碎片"
+            },
+            2: {
+                name: "🔐 开启封印之门",
+                description: "使用爱之钥匙打开封印之门，获得守护之盾！",
+                width: 3500,
+                platforms: [
+                    { x: 0, y: 550, width: 3500, height: 50 },
+                    { x: 250, y: 450, width: 100, height: 20 },
+                    { x: 450, y: 380, width: 100, height: 20 },
+                    { x: 650, y: 320, width: 100, height: 20 },
+                    { x: 850, y: 380, width: 150, height: 20 },
+                    { x: 1100, y: 320, width: 100, height: 20 },
+                    { x: 1350, y: 380, width: 150, height: 20 },
+                    { x: 1650, y: 300, width: 200, height: 20 },
+                    { x: 2000, y: 380, width: 150, height: 20 },
+                    { x: 2300, y: 320, width: 100, height: 20 },
+                    { x: 2600, y: 380, width: 200, height: 20 },
+                    { x: 2950, y: 450, width: 200, height: 20 },
+                ],
+                enemies: [
+                    { x: 400, y: 520, type: 'walk', speed: 1.0 },
+                    { x: 700, y: 520, type: 'walk', speed: 1.0 },
+                    { x: 1000, y: 520, type: 'walk', speed: 1.0 },
+                    { x: 1500, y: 520, type: 'walk', speed: 1.0 },
+                    { x: 1800, y: 520, type: 'walk', speed: 1.0 },
+                    { x: 2200, y: 520, type: 'walk', speed: 1.0 },
+                    { x: 2700, y: 520, type: 'walk', speed: 1.0 },
+                ],
+                items: [
+                    { x: 300, y: 390, type: 'star' },
+                    { x: 500, y: 320, type: 'star' },
+                    { x: 700, y: 260, type: 'star' },
+                    { x: 900, y: 320, type: 'star' },
+                    { x: 1150, y: 260, type: 'star' },
+                    { x: 1400, y: 320, type: 'star' },
+                    { x: 2050, y: 320, type: 'star' },
+                    { x: 2350, y: 260, type: 'star' },
+                ],
+                lockedDoor: { x: 1700, y: 370, width: 60, height: 100, opened: false },
+                questionBox: { x: 1750, y: 230, asked: false, needsKey: true },
+                goal: { x: 3300, y: 480 },
+                specialMechanic: "打开封印之门"
+            },
+            3: {
+                name: "🛡️ 决战时光守护者",
+                description: "用守护之盾抵挡攻击，击败BOSS！",
+                width: 1200,
+                platforms: [
+                    { x: 0, y: 550, width: 1200, height: 50 },
+                    { x: 150, y: 450, width: 150, height: 20 },
+                    { x: 500, y: 380, width: 200, height: 20 },
+                    { x: 900, y: 450, width: 150, height: 20 },
+                ],
+                enemies: [],
+                items: [
+                    { x: 200, y: 390, type: 'heart' },
+                    { x: 950, y: 390, type: 'heart' },
+                ],
+                boss: {
+                    x: 600,
+                    y: 300,
+                    width: 80,
+                    height: 80,
+                    hp: 10,
+                    maxHp: 10,
+                    vx: 2,
+                    attackCooldown: 0,
+                    projectiles: []
+                },
+                goal: null,
+                specialMechanic: "用盾牌抵挡"
+            }
+        };
+
+        // 初始化当前关卡的敌人和道具
+        let platforms = [];
+        let enemies = [];
+        let items = [];
+        let questionBox = null;
+        let goal = null;
+        let boss = null;
+        let lockedDoor = null;
+        let keyFragments = 0;
+
+        function loadLevel(levelNum) {
+            currentLevel = levelNum;
+            const levelData = levels[levelNum];
+            
+            platforms = levelData.platforms.map(p => ({...p}));
+            enemies = levelData.enemies.map(e => ({
+                ...e,
+                width: 32,
+                height: 32,
+                vx: e.type === 'walk' ? -(e.speed || 2) : 0,
+                alive: true
+            }));
+            items = levelData.items.map(i => ({
+                ...i,
+                width: i.type === 'keyFragment' ? 30 : 24,
+                height: i.type === 'keyFragment' ? 30 : 24,
+                collected: false,
+                bounce: 0
+            }));
+            
+            questionBox = levelData.questionBox ? {...levelData.questionBox, width: 40, height: 40} : null;
+            goal = levelData.goal ? {...levelData.goal, width: 60, height: 60} : null;
+            boss = levelData.boss ? {...levelData.boss} : null;
+            lockedDoor = levelData.lockedDoor ? {...levelData.lockedDoor} : null;
+            
+            // 重置关卡特定变量
+            keyFragments = 0;
+            
+            // 重置玩家位置
+            player.x = 100;
+            player.y = 100;
+            player.vx = 0;
+            player.vy = 0;
+            game.camera.x = 0;
+            
+            // 显示关卡描述
+            showHint(levelData.description, 3000);
+        }
+
+        // ==================== 问题库 ====================
+        const questions = {
+            1: {
+                question: "💝 在我们的爱情中，什么最重要？",
+                answers: ["金钱和物质", "相互理解与包容", "外在条件"],
+                correct: 1,
+                reward: "爱之钥匙"
+            },
+            2: {
+                question: "🌹 当遇到困难时，我们应该怎么做？",
+                answers: ["互相埋怨", "一起面对解决", "各自逃避"],
+                correct: 1,
+                reward: "守护之盾"
+            },
+            3: {
+                question: "💕 我们的未来会是什么样？",
+                answers: ["充满挑战但一起面对", "不知道", "随遇而安"],
+                correct: 0,
+                reward: null
+            }
+        };
+
+        // ==================== 输入控制 ====================
+        // 键盘控制
+        window.addEventListener('keydown', (e) => {
+            game.keys[e.key] = true;
+            if (e.key === ' ' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (player.onGround) {
+                    player.vy = player.jumpForce;
+                }
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            game.keys[e.key] = false;
+        });
+
+        // 触摸控制
+        document.getElementById('btn-left').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            game.touchControls.left = true;
+        });
+
+        document.getElementById('btn-left').addEventListener('touchend', (e) => {
+            e.preventDefault();
+            game.touchControls.left = false;
+        });
+
+        document.getElementById('btn-right').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            game.touchControls.right = true;
+        });
+
+        document.getElementById('btn-right').addEventListener('touchend', (e) => {
+            e.preventDefault();
+            game.touchControls.right = false;
+        });
+
+        document.getElementById('btn-jump').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (player.onGround && game.state === 'playing') {
+                player.vy = player.jumpForce;
+            }
+        });
+
+        // 鼠标控制（电脑端）
+        document.getElementById('btn-left').addEventListener('mousedown', () => game.touchControls.left = true);
+        document.getElementById('btn-left').addEventListener('mouseup', () => game.touchControls.left = false);
+        document.getElementById('btn-right').addEventListener('mousedown', () => game.touchControls.right = true);
+        document.getElementById('btn-right').addEventListener('mouseup', () => game.touchControls.right = false);
+        document.getElementById('btn-jump').addEventListener('mousedown', () => {
+            if (player.onGround && game.state === 'playing') player.vy = player.jumpForce;
+        });
+
+        // ==================== 碰撞检测 ====================
+        function checkCollision(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.width &&
+                   rect1.x + rect1.width > rect2.x &&
+                   rect1.y < rect2.y + rect2.height &&
+                   rect1.y + rect1.height > rect2.y;
+        }
+
+        // ==================== 游戏逻辑 ====================
+        function update() {
+            if (game.state !== 'playing') return;
+
+            // 更新计时器
+            const elapsed = Math.floor((Date.now() - game.startTime) / 1000);
+            document.getElementById('timer').textContent = elapsed;
+
+            // 玩家移动
+            player.vx = 0;
+            if (game.keys['ArrowLeft'] || game.keys['a'] || game.touchControls.left) {
+                player.vx = -player.speed;
+                player.direction = -1;
+            }
+            if (game.keys['ArrowRight'] || game.keys['d'] || game.touchControls.right) {
+                player.vx = player.speed;
+                player.direction = 1;
+            }
+
+            // 重力
+            player.vy += game.gravity;
+            player.vy = Math.min(player.vy, 15); // 最大下落速度
+
+            // 更新位置
+            player.x += player.vx;
+            player.y += player.vy;
+
+            // 碰撞检测 - 平台
+            player.onGround = false;
+            platforms.forEach(platform => {
+                if (checkCollision(player, platform)) {
+                    // 从上方落下
+                    if (player.vy > 0 && player.y + player.height - player.vy <= platform.y + 5) {
+                        player.y = platform.y - player.height;
+                        player.vy = 0;
+                        player.onGround = true;
+                    }
+                    // 从下方撞击
+                    else if (player.vy < 0 && player.y - player.vy >= platform.y + platform.height) {
+                        player.y = platform.y + platform.height;
+                        player.vy = 0;
+                    }
+                }
+            });
+
+            // 边界检测
+            if (player.x < 0) player.x = 0;
+            if (player.x > levels[currentLevel].width - player.width) {
+                player.x = levels[currentLevel].width - player.width;
+            }
+
+            // 掉落死亡
+            if (player.y > canvas.height) {
+                takeDamage();
+            }
+
+            // 无敌时间递减
+            if (player.invincible > 0) player.invincible--;
+
+            // 更新敌人
+            enemies.forEach(enemy => {
+                if (!enemy.alive) return;
+
+                enemy.x += enemy.vx;
+
+                // 敌人转向
+                if (enemy.type === 'walk') {
+                    if (enemy.x < 50 || enemy.x > levels[currentLevel].width - 50) {
+                        enemy.vx = -enemy.vx;
+                    }
+                }
+
+                // 玩家碰到敌人
+                if (checkCollision(player, enemy) && player.invincible === 0) {
+                    // 从上方踩到
+                    if (player.vy > 0 && player.y < enemy.y) {
+                        enemy.alive = false;
+                        player.vy = -8;
+                        game.stars += 1;
+                    } else {
+                        takeDamage();
+                    }
+                }
+            });
+
+            // 更新道具
+            items.forEach(item => {
+                if (item.collected) return;
+                
+                item.bounce += 0.1;
+
+                if (checkCollision(player, item) && !item.collected) {
+                    item.collected = true;
+                    
+                    // 添加收集音效提示和视觉反馈
+                    if (item.type === 'star') {
+                        game.stars += 1;
+                        showHint('⭐ +1', 1000);
+                    } else if (item.type === 'heart') {
+                        game.hearts = Math.min(3, game.hearts + 1);
+                        showHint('💖 生命恢复！', 1500);
+                    } else if (item.type === 'keyFragment') {
+                        keyFragments += 1;
+                        showHint(`🔑 获得钥匙碎片！ (${keyFragments}/3)`, 2000);
+                    }
+                }
+            });
+
+            // 问号箱
+            if (questionBox && !questionBox.asked && checkCollision(player, questionBox)) {
+                // 关卡1：需要收集足够的钥匙碎片
+                if (questionBox.needsFragments && keyFragments < questionBox.needsFragments) {
+                    if (!questionBox.hintShown) {
+                        showHint(`还需要收集 ${questionBox.needsFragments - keyFragments} 个钥匙碎片！`, 2000);
+                        questionBox.hintShown = true;
+                        setTimeout(() => { questionBox.hintShown = false; }, 3000);
+                    }
+                }
+                // 关卡2：需要钥匙才能打开
+                else if (questionBox.needsKey && player.weapon !== '爱之钥匙') {
+                    if (!questionBox.hintShown) {
+                        showHint('需要爱之钥匙才能打开这个箱子！', 2000);
+                        questionBox.hintShown = true;
+                        setTimeout(() => { questionBox.hintShown = false; }, 3000);
+                    }
+                }
+                else {
+                    showQuestion();
+                    questionBox.asked = true;
+                }
+            }
+
+            // 封印之门（关卡2）
+            if (lockedDoor && !lockedDoor.opened) {
+                if (checkCollision(player, lockedDoor)) {
+                    if (player.weapon === '爱之钥匙') {
+                        lockedDoor.opened = true;
+                        showHint('🔓 封印之门已打开！', 2000);
+                    } else {
+                        // 阻挡玩家
+                        if (player.x + player.width > lockedDoor.x && player.x < lockedDoor.x + lockedDoor.width / 2) {
+                            player.x = lockedDoor.x - player.width;
+                        }
+                        if (!lockedDoor.hintShown) {
+                            showHint('🔒 需要爱之钥匙才能打开这扇门！', 1500);
+                            lockedDoor.hintShown = true;
+                            setTimeout(() => { lockedDoor.hintShown = false; }, 2000);
+                        }
+                    }
+                }
+            }
+
+            // 终点
+            if (goal && checkCollision(player, goal)) {
+                nextLevel();
+            }
+
+            // BOSS战逻辑
+            if (boss && boss.hp > 0) {
+                boss.x += boss.vx;
+                
+                if (boss.x < 100 || boss.x > levels[currentLevel].width - 100) {
+                    boss.vx = -boss.vx;
+                }
+
+                // BOSS发射弹幕
+                boss.attackCooldown--;
+                if (boss.attackCooldown <= 0) {
+                    boss.attackCooldown = 90; // 每1.5秒发射一次
+                    const angle = Math.atan2(player.y - boss.y, player.x - boss.x);
+                    boss.projectiles.push({
+                        x: boss.x + boss.width / 2,
+                        y: boss.y + boss.height / 2,
+                        vx: Math.cos(angle) * 4,
+                        vy: Math.sin(angle) * 4,
+                        width: 20,
+                        height: 20
+                    });
+                }
+
+                // 更新弹幕
+                for (let i = boss.projectiles.length - 1; i >= 0; i--) {
+                    const proj = boss.projectiles[i];
+                    proj.x += proj.vx;
+                    proj.y += proj.vy;
+
+                    // 弹幕碰到玩家
+                    if (checkCollision(player, proj)) {
+                        boss.projectiles.splice(i, 1);
+                        // 如果有盾牌，可以抵挡
+                        if (player.weapon === '守护之盾') {
+                            showHint('🛡️ 盾牌抵挡了攻击！', 1000);
+                        } else if (player.invincible === 0) {
+                            takeDamage();
+                        }
+                    }
+                    // 弹幕飞出屏幕
+                    else if (proj.x < 0 || proj.x > levels[currentLevel].width || proj.y < 0 || proj.y > canvas.height) {
+                        boss.projectiles.splice(i, 1);
+                    }
+                }
+
+                // 玩家攻击BOSS
+                if (checkCollision(player, boss)) {
+                    if (player.vy > 0 && player.y < boss.y) {
+                        boss.hp--;
+                        player.vy = -10;
+                        showHint(`💥 BOSS HP: ${boss.hp}/${boss.maxHp}`, 1000);
+                        
+                        if (boss.hp <= 0) {
+                            setTimeout(() => {
+                                showEnding();
+                            }, 500);
+                        }
+                    } else if (player.invincible === 0) {
+                        // 如果有盾牌，减少伤害
+                        if (player.weapon === '守护之盾') {
+                            showHint('🛡️ 盾牌减少了伤害！', 1000);
+                            player.invincible = 60;
+                        } else {
+                            takeDamage();
+                        }
+                    }
+                }
+            }
+
+            // 更新摄像机
+            updateCamera();
+
+            // 更新HUD
+            document.getElementById('hearts').textContent = game.hearts;
+            document.getElementById('stars').textContent = game.stars;
+            
+            // 更新武器显示
+            if (player.weapon) {
+                const weaponEmoji = player.weapon === '爱之钥匙' ? '🔑' : player.weapon === '守护之盾' ? '🛡️' : '🎁';
+                document.getElementById('weapon-name').textContent = weaponEmoji;
+                document.getElementById('weapon-display').style.display = 'block';
+            } else {
+                document.getElementById('weapon-display').style.display = 'none';
+            }
+            
+            // 更新钥匙碎片显示
+            if (currentLevel === 1) {
+                document.getElementById('fragments').textContent = keyFragments;
+                document.getElementById('fragment-display').style.display = 'block';
+            } else {
+                document.getElementById('fragment-display').style.display = 'none';
+            }
+        }
+
+        function updateCamera() {
+            // 摄像机跟随玩家
+            const targetX = player.x - canvas.width / 2 + player.width / 2;
+            game.camera.x = Math.max(0, Math.min(targetX, levels[currentLevel].width - canvas.width));
+        }
+
+        function takeDamage() {
+            game.hearts--;
+            player.invincible = 60;
+            player.x = 100;
+            player.y = 100;
+            player.vx = 0;
+            player.vy = 0;
+            
+            if (game.hearts <= 0) {
+                alert('游戏结束！再来一次吧！');
+                restartGame();
+            }
+        }
+
+        // ==================== 渲染 ====================
+        function render() {
+            // 清空画布
+            ctx.fillStyle = '#5c94fc';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.save();
+            ctx.translate(-game.camera.x, 0);
+
+            // 绘制背景云朵
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            for (let i = 0; i < 5; i++) {
+                const cloudX = (i * 300 + game.camera.x * 0.5) % (levels[currentLevel].width + 300);
+                drawCloud(cloudX, 80 + i * 40);
+            }
+
+            // 绘制平台
+            ctx.fillStyle = '#8B4513';
+            ctx.strokeStyle = '#654321';
+            ctx.lineWidth = 2;
+            platforms.forEach(platform => {
+                ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
+                
+                // 草地装饰
+                if (platform.height > 30) {
+                    ctx.fillStyle = '#228B22';
+                    ctx.fillRect(platform.x, platform.y, platform.width, 8);
+                    ctx.fillStyle = '#8B4513';
+                }
+            });
+
+            // 绘制道具
+            items.forEach(item => {
+                if (item.collected) return;
+                
+                const bounceY = Math.sin(item.bounce) * 5;
+                
+                if (item.type === 'star') {
+                    drawStar(item.x + 12, item.y + 12 + bounceY, 12, '#FFD700');
+                } else if (item.type === 'heart') {
+                    drawHeart(item.x + 12, item.y + 12 + bounceY, '#FF69B4');
+                } else if (item.type === 'keyFragment') {
+                    drawKeyFragment(item.x + 15, item.y + 15 + bounceY);
+                }
+            });
+
+            // 绘制封印之门
+            if (lockedDoor && !lockedDoor.opened) {
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(lockedDoor.x, lockedDoor.y, lockedDoor.width, lockedDoor.height);
+                ctx.strokeStyle = '#654321';
+                ctx.lineWidth = 4;
+                ctx.strokeRect(lockedDoor.x, lockedDoor.y, lockedDoor.width, lockedDoor.height);
+                
+                // 门上的锁
+                ctx.fillStyle = '#FFD700';
+                ctx.beginPath();
+                ctx.arc(lockedDoor.x + lockedDoor.width / 2, lockedDoor.y + 40, 15, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillRect(lockedDoor.x + lockedDoor.width / 2 - 8, lockedDoor.y + 45, 16, 20);
+                ctx.fillStyle = '#8B4513';
+                ctx.beginPath();
+                ctx.arc(lockedDoor.x + lockedDoor.width / 2, lockedDoor.y + 40, 8, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 门的装饰
+                ctx.strokeStyle = '#FFD700';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(lockedDoor.x + 5, lockedDoor.y + 5, lockedDoor.width - 10, lockedDoor.height - 10);
+            }
+
+            // 绘制问号箱
+            if (questionBox && !questionBox.asked) {
+                // 检查是否可以打开
+                let canOpen = true;
+                if (questionBox.needsFragments && keyFragments < questionBox.needsFragments) {
+                    canOpen = false;
+                    ctx.fillStyle = '#888';
+                } else if (questionBox.needsKey && player.weapon !== '爱之钥匙') {
+                    canOpen = false;
+                    ctx.fillStyle = '#888';
+                } else {
+                    ctx.fillStyle = '#FFD700';
+                }
+                
+                ctx.fillRect(questionBox.x, questionBox.y, questionBox.width, questionBox.height);
+                ctx.strokeStyle = canOpen ? '#FF8C00' : '#555';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(questionBox.x, questionBox.y, questionBox.width, questionBox.height);
+                ctx.fillStyle = canOpen ? '#FF4500' : '#333';
+                ctx.font = 'bold 30px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('?', questionBox.x + 20, questionBox.y + 30);
+            }
+
+            // 绘制终点
+            if (goal) {
+                drawFlag(goal.x, goal.y);
+            }
+
+            // 绘制敌人
+            enemies.forEach(enemy => {
+                if (!enemy.alive) return;
+                drawEnemy(enemy.x, enemy.y, enemy.width, enemy.height);
+            });
+
+            // 绘制BOSS弹幕
+            if (boss && boss.projectiles) {
+                boss.projectiles.forEach(proj => {
+                    ctx.fillStyle = '#FF00FF';
+                    ctx.beginPath();
+                    ctx.arc(proj.x, proj.y, proj.width / 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#FF1493';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                });
+            }
+
+            // 绘制BOSS
+            if (boss && boss.hp > 0) {
+                drawBoss(boss.x, boss.y, boss.width, boss.height);
+                
+                // BOSS血条
+                const hpBarWidth = 100;
+                const hpBarHeight = 8;
+                ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+                ctx.fillRect(boss.x - 10, boss.y - 20, hpBarWidth, hpBarHeight);
+                ctx.fillStyle = '#FF0000';
+                ctx.fillRect(boss.x - 10, boss.y - 20, hpBarWidth * (boss.hp / boss.maxHp), hpBarHeight);
+            }
+
+            // 绘制玩家
+            if (player.invincible % 4 < 2) { // 无敌闪烁效果
+                drawPlayer(player.x, player.y, player.width, player.height, player.direction);
+            }
+
+            ctx.restore();
+
+            // 绘制关卡名称
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(10, canvas.height - 50, 200, 40);
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText(levels[currentLevel].name, 20, canvas.height - 25);
+            
+            // 绘制提示
+            renderHint();
+        }
+
+        // ==================== 绘制函数 ====================
+        function drawPlayer(x, y, w, h, dir) {
+            // 火柴人身体（线条）
+            ctx.strokeStyle = '#FF69B4';
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            
+            const headSize = 18;
+            const bodyStart = y + headSize * 2;
+            const bodyEnd = y + h - 12;
+            const centerX = x + w / 2;
+            
+            // 身体（竖线）
+            ctx.beginPath();
+            ctx.moveTo(centerX, bodyStart);
+            ctx.lineTo(centerX, bodyEnd - 8);
+            ctx.stroke();
+            
+            // 手臂
+            const armY = bodyStart + 8;
+            ctx.beginPath();
+            ctx.moveTo(centerX - 12, armY - 5);
+            ctx.lineTo(centerX, armY);
+            ctx.lineTo(centerX + 12 * dir, armY - 5);
+            ctx.stroke();
+            
+            // 腿（走路动画）
+            const legOffset = Math.sin(Date.now() * 0.01) * 3;
+            ctx.beginPath();
+            ctx.moveTo(centerX, bodyEnd - 8);
+            ctx.lineTo(centerX - 8, bodyEnd + legOffset);
+            ctx.moveTo(centerX, bodyEnd - 8);
+            ctx.lineTo(centerX + 8, bodyEnd - legOffset);
+            ctx.stroke();
+            
+            // 头部（使用图片）
+            if (playerAvatar.complete) {
+                ctx.save();
+                if (dir === -1) {
+                    ctx.scale(-1, 1);
+                    ctx.drawImage(playerAvatar, -(x + w/2 + headSize), y, headSize * 2, headSize * 2);
+                } else {
+                    ctx.drawImage(playerAvatar, x + w/2 - headSize, y, headSize * 2, headSize * 2);
+                }
+                ctx.restore();
+            } else {
+                // 备用圆形头部
+                ctx.fillStyle = '#FFB6C1';
+                ctx.beginPath();
+                ctx.arc(centerX, y + headSize, headSize, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 简单的脸
+                ctx.fillStyle = '#000';
+                ctx.beginPath();
+                ctx.arc(centerX - 5, y + headSize - 2, 2, 0, Math.PI * 2);
+                ctx.arc(centerX + 5, y + headSize - 2, 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(centerX, y + headSize + 5, 8, 0, Math.PI);
+                ctx.stroke();
+            }
+            
+            // 显示武器
+            if (player.weapon) {
+                ctx.font = 'bold 16px Arial';
+                ctx.fillStyle = '#FFD700';
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.textAlign = 'center';
+                const weaponText = player.weapon === '爱之钥匙' ? '🔑' : player.weapon === '守护之盾' ? '🛡️' : '';
+                ctx.strokeText(weaponText, centerX + 20 * dir, armY - 10);
+                ctx.fillText(weaponText, centerX + 20 * dir, armY - 10);
+            }
+        }
+
+        function drawEnemy(x, y, w, h) {
+            // 身体
+            ctx.fillStyle = '#8B008B';
+            ctx.beginPath();
+            ctx.arc(x + w/2, y + h/2, w/2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 眼睛
+            ctx.fillStyle = '#FFF';
+            ctx.fillRect(x + 8, y + 10, 6, 6);
+            ctx.fillRect(x + 18, y + 10, 6, 6);
+            ctx.fillStyle = '#000';
+            ctx.fillRect(x + 10, y + 12, 3, 3);
+            ctx.fillRect(x + 20, y + 12, 3, 3);
+            
+            // 脚
+            ctx.fillStyle = '#4B0082';
+            ctx.fillRect(x + 6, y + h - 6, 8, 6);
+            ctx.fillRect(x + w - 14, y + h - 6, 8, 6);
+        }
+
+        function drawBoss(x, y, w, h) {
+            // BOSS身体
+            ctx.fillStyle = '#FF0000';
+            ctx.fillRect(x, y + 10, w, h - 10);
+            
+            // 头
+            ctx.fillStyle = '#FF4500';
+            ctx.beginPath();
+            ctx.arc(x + w/2, y + 20, 25, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 角
+            ctx.fillStyle = '#8B0000';
+            ctx.beginPath();
+            ctx.moveTo(x + 15, y + 10);
+            ctx.lineTo(x + 20, y);
+            ctx.lineTo(x + 25, y + 10);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(x + w - 25, y + 10);
+            ctx.lineTo(x + w - 20, y);
+            ctx.lineTo(x + w - 15, y + 10);
+            ctx.fill();
+            
+            // 眼睛
+            ctx.fillStyle = '#FFF';
+            ctx.fillRect(x + 20, y + 20, 10, 10);
+            ctx.fillRect(x + 50, y + 20, 10, 10);
+            ctx.fillStyle = '#000';
+            ctx.fillRect(x + 23, y + 23, 5, 5);
+            ctx.fillRect(x + 53, y + 23, 5, 5);
+        }
+
+        function drawStar(x, y, radius, color) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            for (let i = 0; i < 5; i++) {
+                const angle = (i * 4 * Math.PI) / 5 - Math.PI / 2;
+                const px = x + Math.cos(angle) * radius;
+                const py = y + Math.sin(angle) * radius;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function drawHeart(x, y, color) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(x, y + 5);
+            ctx.bezierCurveTo(x, y, x - 7, y - 5, x - 10, y - 5);
+            ctx.bezierCurveTo(x - 15, y - 5, x - 15, y + 2, x - 15, y + 2);
+            ctx.bezierCurveTo(x - 15, y + 8, x - 10, y + 12, x, y + 18);
+            ctx.bezierCurveTo(x + 10, y + 12, x + 15, y + 8, x + 15, y + 2);
+            ctx.bezierCurveTo(x + 15, y + 2, x + 15, y - 5, x + 10, y - 5);
+            ctx.bezierCurveTo(x + 7, y - 5, x, y, x, y + 5);
+            ctx.fill();
+        }
+
+        function drawKeyFragment(x, y) {
+            // 钥匙碎片 - 金色的碎片
+            ctx.fillStyle = '#FFD700';
+            ctx.strokeStyle = '#FF8C00';
+            ctx.lineWidth = 2;
+            
+            // 主体
+            ctx.beginPath();
+            ctx.arc(x, y, 8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            
+            // 闪光效果
+            ctx.fillStyle = '#FFF';
+            ctx.beginPath();
+            ctx.arc(x - 3, y - 3, 3, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 钥匙齿
+            ctx.fillStyle = '#FFD700';
+            ctx.fillRect(x - 2, y + 5, 4, 8);
+            ctx.fillRect(x - 2, y + 10, 6, 3);
+            ctx.strokeStyle = '#FF8C00';
+            ctx.strokeRect(x - 2, y + 5, 4, 8);
+        }
+
+        function drawCloud(x, y) {
+            ctx.beginPath();
+            ctx.arc(x, y, 20, 0, Math.PI * 2);
+            ctx.arc(x + 25, y, 25, 0, Math.PI * 2);
+            ctx.arc(x + 50, y, 20, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawFlag(x, y) {
+            // 旗杆
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(x + 25, y, 5, 60);
+            
+            // 旗帜
+            ctx.fillStyle = '#FF1493';
+            ctx.beginPath();
+            ctx.moveTo(x + 30, y + 5);
+            ctx.lineTo(x + 55, y + 15);
+            ctx.lineTo(x + 30, y + 25);
+            ctx.closePath();
+            ctx.fill();
+            
+            // 礼物盒
+            ctx.fillStyle = '#FFD700';
+            ctx.fillRect(x + 5, y + 40, 40, 40);
+            ctx.fillStyle = '#FF4500';
+            ctx.fillRect(x + 20, y + 40, 10, 40);
+            ctx.fillRect(x + 5, y + 55, 40, 10);
+            
+            // 蝴蝶结
+            ctx.fillStyle = '#FF0000';
+            ctx.fillRect(x + 18, y + 35, 14, 8);
+        }
+
+        // ==================== 问答系统 ====================
+        function showQuestion() {
+            game.state = 'question';
+            const modal = document.getElementById('question-modal');
+            const questionText = document.getElementById('question-text');
+            const answerButtons = document.getElementById('answer-buttons');
+            
+            const q = questions[currentLevel];
+            questionText.textContent = q.question;
+            
+            answerButtons.innerHTML = '';
+            q.answers.forEach((answer, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'answer-btn';
+                btn.textContent = answer;
+                btn.onclick = () => checkAnswer(index, btn, q.correct, q.reward);
+                answerButtons.appendChild(btn);
+            });
+            
+            modal.classList.add('active');
+        }
+
+        function checkAnswer(index, btn, correct, reward) {
+            if (index === correct) {
+                btn.classList.add('correct');
+                game.stars += 3;
+                game.hearts = Math.min(3, game.hearts + 1);
+                
+                // 获得武器
+                if (reward) {
+                    player.weapon = reward;
+                    const weaponEmoji = reward === '爱之钥匙' ? '🔑' : reward === '守护之盾' ? '🛡️' : '';
+                    showHint(`🎉 获得了 ${weaponEmoji} ${reward}！`, 3000);
+                }
+                
+                setTimeout(() => {
+                    closeQuestion();
+                }, 1500);
+            } else {
+                btn.classList.add('wrong');
+                setTimeout(() => {
+                    btn.classList.remove('wrong');
+                }, 500);
+            }
+        }
+
+        function closeQuestion() {
+            document.getElementById('question-modal').classList.remove('active');
+            game.state = 'playing';
+        }
+
+        // ==================== 关卡切换 ====================
+        function nextLevel() {
+            if (currentLevel < 3) {
+                currentLevel++;
+                loadLevel(currentLevel);
+            } else {
+                showEnding();
+            }
+        }
+
+        // ==================== 结局 ====================
+        function showEnding() {
+            game.state = 'ending';
+            document.getElementById('final-stars').textContent = game.stars;
+            document.getElementById('ending-screen').classList.add('active');
+            startFireworks();
+        }
+
+        function startFireworks() {
+            const fireworksCanvas = document.getElementById('fireworks-canvas');
+            fireworksCanvas.width = window.innerWidth;
+            fireworksCanvas.height = window.innerHeight;
+            const fctx = fireworksCanvas.getContext('2d');
+            
+            const particles = [];
+            
+            function createFirework() {
+                const x = Math.random() * fireworksCanvas.width;
+                const y = Math.random() * fireworksCanvas.height * 0.5;
+                const colors = ['#FF69B4', '#FFD700', '#FF1493', '#FFA500', '#FF6347'];
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                
+                for (let i = 0; i < 30; i++) {
+                    particles.push({
+                        x: x,
+                        y: y,
+                        vx: (Math.random() - 0.5) * 8,
+                        vy: (Math.random() - 0.5) * 8,
+                        life: 60,
+                        color: color
+                    });
+                }
+            }
+            
+            let fireworkInterval = setInterval(createFirework, 500);
+            
+            function animateFireworks() {
+                fctx.fillStyle = 'rgba(255, 236, 210, 0.1)';
+                fctx.fillRect(0, 0, fireworksCanvas.width, fireworksCanvas.height);
+                
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    const p = particles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += 0.2;
+                    p.life--;
+                    
+                    if (p.life <= 0) {
+                        particles.splice(i, 1);
+                        continue;
+                    }
+                    
+                    fctx.fillStyle = p.color;
+                    fctx.globalAlpha = p.life / 60;
+                    fctx.beginPath();
+                    fctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+                    fctx.fill();
+                }
+                
+                fctx.globalAlpha = 1;
+                
+                if (game.state === 'ending') {
+                    requestAnimationFrame(animateFireworks);
+                } else {
+                    clearInterval(fireworkInterval);
+                }
+            }
+            
+            animateFireworks();
+        }
+
+        // ==================== 提示系统 ====================
+        let currentHint = null;
+        
+        function showHint(text, duration = 2000) {
+            currentHint = {
+                text: text,
+                time: duration,
+                alpha: 1
+            };
+        }
+        
+        function updateHint() {
+            if (currentHint) {
+                currentHint.time -= 16; // 假设60fps，每帧约16ms
+                if (currentHint.time <= 0) {
+                    currentHint = null;
+                } else if (currentHint.time < 500) {
+                    // 最后500ms淡出
+                    currentHint.alpha = currentHint.time / 500;
+                }
+            }
+        }
+        
+        function renderHint() {
+            if (currentHint) {
+                ctx.save();
+                ctx.globalAlpha = currentHint.alpha;
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                ctx.fillRect(canvas.width / 2 - 100, 50, 200, 40);
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(currentHint.text, canvas.width / 2, 75);
+                ctx.restore();
+            }
+        }
+
+        // ==================== 游戏主循环 ====================
+        function gameLoop() {
+            update();
+            updateHint();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // ==================== 开始游戏 ====================
+        function startGame() {
+            document.getElementById('start-screen').classList.add('hidden');
+            game.state = 'playing';
+            game.hearts = 3;
+            game.stars = 0;
+            game.startTime = Date.now();
+            player.weapon = null;
+            keyFragments = 0;
+            
+            // 重置所有关卡状态
+            Object.values(levels).forEach(level => {
+                if (level.questionBox) level.questionBox.asked = false;
+                if (level.lockedDoor) level.lockedDoor.opened = false;
+            });
+            
+            loadLevel(1);
+        }
+
+        function restartGame() {
+            document.getElementById('ending-screen').classList.remove('active');
+            document.getElementById('start-screen').classList.remove('hidden');
+            game.state = 'start';
+            game.hearts = 3;
+            game.stars = 0;
+            player.weapon = null;
+            keyFragments = 0;
+            
+            // 重置所有关卡的问号箱状态
+            Object.values(levels).forEach(level => {
+                if (level.questionBox) level.questionBox.asked = false;
+                if (level.lockedDoor) level.lockedDoor.opened = false;
+            });
+        }
+
+        // 初始化游戏循环
+        gameLoop();
+    </script>
+</body>
+</html>
