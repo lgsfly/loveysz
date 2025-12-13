@@ -110,6 +110,32 @@
         .jump-btn:active {
             background: rgba(255, 107, 107, 1);
         }
+        
+        /* 方向键容器 - 支持同时按跳跃 */
+        .direction-pad {
+            position: relative;
+            width: 140px;
+            height: 140px;
+        }
+        
+        .direction-pad .control-btn {
+            position: absolute;
+        }
+        
+        .direction-pad #btn-left {
+            left: 0;
+            top: 40px;
+        }
+        
+        .direction-pad #btn-right {
+            right: 0;
+            top: 40px;
+        }
+        
+        .direction-pad #btn-up {
+            left: 40px;
+            top: 0;
+        }
 
         /* 开始界面 */
         .start-screen {
@@ -202,6 +228,16 @@
             margin-bottom: 20px;
             color: #333;
             text-align: center;
+        }
+        
+        .question-image {
+            width: 100%;
+            max-width: 300px;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 3px solid #333;
         }
 
         .answer-btn {
@@ -298,6 +334,24 @@
             font-family: monospace;
             letter-spacing: 2px;
         }
+        
+        /* 胜利照片 */
+        .victory-photo {
+            width: 80%;
+            max-width: 400px;
+            height: auto;
+            border-radius: 20px;
+            border: 5px solid #FFD700;
+            margin: 20px 0;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            animation: photoZoom 0.5s;
+        }
+        
+        @keyframes photoZoom {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
     </style>
 </head>
 <body>
@@ -319,7 +373,8 @@
 
         <!-- 移动控制 -->
         <div class="controls">
-            <div class="control-group">
+            <div class="direction-pad">
+                <div class="control-btn" id="btn-up">↑</div>
                 <div class="control-btn" id="btn-left">←</div>
                 <div class="control-btn" id="btn-right">→</div>
             </div>
@@ -333,7 +388,7 @@
     <div class="start-screen" id="start-screen">
         <h1 class="game-title pixel-text">🎮 生日大冒险 🎂</h1>
         <div class="instructions">
-            <p>💝 帮助勇者找到生日礼物！</p>
+            <p>💝 帮助女神找到生日礼物！</p>
             <p>⭐ 收集星星，打败敌人</p>
             <p>❓ 回答问题获得奖励</p>
             <p>🐉 击败大BOSS获得祝福</p>
@@ -343,6 +398,7 @@
 
     <!-- 问答弹窗 -->
     <div class="question-modal" id="question-modal">
+        <img class="question-image" id="question-image" src="" alt="问题图片" style="display: none;">
         <div class="question-title" id="question-text"></div>
         <div id="answer-buttons"></div>
     </div>
@@ -350,16 +406,11 @@
     <!-- 结局界面 -->
     <div class="ending-screen" id="ending-screen">
         <h1 class="ending-title">🎉 生日快乐 🎉</h1>
+        <img class="victory-photo" id="victory-photo" src="second.jpg" alt="胜利照片">
         <div class="ending-message">
-            <p>🎂 亲爱的宝贝 🎂</p>
-            <p style="margin-top: 20px;">在这个特别的日子里，</p>
-            <p>感谢你一直以来的陪伴与支持。</p>
-            <p>你的笑容是我最珍贵的礼物，</p>
-            <p>你的快乐是我最大的心愿。</p>
-            <p style="margin-top: 20px; font-size: 20px; color: #f5576c; font-weight: bold;">
-                愿我们的每一天都如今天般甜蜜！<br>
-                永远爱你！💕
-            </p>
+            <p style="font-size: 18px; color: #f5576c; font-weight: bold;">女神大人，你拯救了银河系，</p>
+            <p style="font-size: 18px; color: #f5576c; font-weight: bold;">获得了来自lgsloveysz星球的生日礼物(´▽`ʃ♡ƪ)</p>
+            <p style="margin-top: 20px; font-size: 20px; color: #FF1493; font-weight: bold;">赶紧去领取吧！</p>
             <p style="margin-top: 30px;">⭐ 你收集了 <span id="final-stars">0</span> 颗星星！</p>
         </div>
         <button class="start-btn" onclick="restartGame()">再玩一次</button>
@@ -424,7 +475,7 @@
             vx: 0,
             vy: 0,
             speed: 4,
-            jumpForce: -12,
+            jumpForce: -15, // 增加弹跳力（从-12改为-15）
             onGround: false,
             invincible: 0,
             direction: 1, // 1=右, -1=左
@@ -662,22 +713,26 @@
         // ==================== 问题库 ====================
         const questions = {
             1: {
-                question: "💝 在我们的爱情中，什么最重要？",
-                answers: ["金钱和物质", "相互理解与包容", "外在条件"],
-                correct: 1,
-                reward: "爱之钥匙"
+                question: "💝 你最喜欢的是谁？",
+                answers: ["张智霖", "鹿晗", "金城武"],
+                correct: -1, // 任何答案都正确
+                reward: "爱之钥匙",
+                image: "second.jpg"
             },
             2: {
-                question: "🌹 当遇到困难时，我们应该怎么做？",
-                answers: ["互相埋怨", "一起面对解决", "各自逃避"],
-                correct: 1,
-                reward: "守护之盾"
+                question: "🌹 你老公最喜欢的是谁？",
+                answers: ["迪丽热巴", "迪丽热妈", "我"],
+                correct: 2,
+                reward: "守护之盾",
+                wrongHint: "我建议你用你聪慧的脑袋再想想",
+                image: "second.jpg"
             },
             3: {
                 question: "💕 我们的未来会是什么样？",
                 answers: ["充满挑战但一起面对", "不知道", "随遇而安"],
                 correct: 0,
-                reward: null
+                reward: null,
+                image: "second.jpg"
             }
         };
 
@@ -724,6 +779,18 @@
                 player.vy = player.jumpForce;
             }
         });
+        
+        // 上方向键也可以跳跃
+        document.getElementById('btn-up').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (player.onGround && game.state === 'playing') {
+                player.vy = player.jumpForce;
+            }
+        });
+        
+        document.getElementById('btn-up').addEventListener('touchend', (e) => {
+            e.preventDefault();
+        });
 
         // 鼠标控制（电脑端）
         document.getElementById('btn-left').addEventListener('mousedown', () => game.touchControls.left = true);
@@ -731,6 +798,11 @@
         document.getElementById('btn-right').addEventListener('mousedown', () => game.touchControls.right = true);
         document.getElementById('btn-right').addEventListener('mouseup', () => game.touchControls.right = false);
         document.getElementById('btn-jump').addEventListener('mousedown', () => {
+            if (player.onGround && game.state === 'playing') player.vy = player.jumpForce;
+        });
+        
+        // 上方向键鼠标控制
+        document.getElementById('btn-up').addEventListener('mousedown', () => {
             if (player.onGround && game.state === 'playing') player.vy = player.jumpForce;
         });
 
@@ -883,6 +955,11 @@
                     if (player.weapon === '爱之钥匙') {
                         lockedDoor.opened = true;
                         showHint('🔓 封印之门已打开！', 2000);
+                        
+                        // 启动火箭传送宝箱动画
+                        if (questionBox && !questionBox.asked) {
+                            startRocketAnimation();
+                        }
                     } else {
                         // 阻挡玩家
                         if (player.x + player.width > lockedDoor.x && player.x < lockedDoor.x + lockedDoor.width / 2) {
@@ -895,6 +972,11 @@
                         }
                     }
                 }
+            }
+            
+            // 更新火箭动画
+            if (questionBox && questionBox.rocketAnimation) {
+                updateRocketAnimation();
             }
 
             // 终点
@@ -952,12 +1034,18 @@
                     if (player.vy > 0 && player.y < boss.y) {
                         boss.hp--;
                         player.vy = -10;
+                        
+                        // 创建攻击特效
+                        createAttackEffect(boss.x + boss.width / 2, boss.y + boss.height / 2);
+                        
                         showHint(`💥 BOSS HP: ${boss.hp}/${boss.maxHp}`, 1000);
                         
                         if (boss.hp <= 0) {
+                            // 创建胜利特效
+                            createVictoryEffect();
                             setTimeout(() => {
                                 showEnding();
-                            }, 500);
+                            }, 1000);
                         }
                     } else if (player.invincible === 0) {
                         // 如果有盾牌，减少伤害
@@ -1104,26 +1192,42 @@
 
             // 绘制问号箱
             if (questionBox && !questionBox.asked) {
-                // 检查是否可以打开
-                let canOpen = true;
-                if (questionBox.needsFragments && keyFragments < questionBox.needsFragments) {
-                    canOpen = false;
-                    ctx.fillStyle = '#888';
-                } else if (questionBox.needsKey && player.weapon !== '爱之钥匙') {
-                    canOpen = false;
-                    ctx.fillStyle = '#888';
+                // 关卡2：只有在门打开后才显示问号箱
+                if (currentLevel === 2 && lockedDoor && !lockedDoor.opened) {
+                    // 不显示问号箱
                 } else {
-                    ctx.fillStyle = '#FFD700';
+                    // 检查是否可以打开
+                    let canOpen = true;
+                    if (questionBox.needsFragments && keyFragments < questionBox.needsFragments) {
+                        canOpen = false;
+                        ctx.fillStyle = '#888';
+                    } else if (questionBox.needsKey && player.weapon !== '爱之钥匙') {
+                        canOpen = false;
+                        ctx.fillStyle = '#888';
+                    } else {
+                        ctx.fillStyle = '#FFD700';
+                    }
+                    
+                    // 如果有火箭动画，应用偏移
+                    let boxX = questionBox.x;
+                    let boxY = questionBox.y;
+                    if (questionBox.rocketAnimation) {
+                        boxX = questionBox.rocketX;
+                        boxY = questionBox.rocketY;
+                        
+                        // 绘制火箭
+                        drawRocket(boxX + 20, boxY - 30);
+                    }
+                    
+                    ctx.fillRect(boxX, boxY, questionBox.width, questionBox.height);
+                    ctx.strokeStyle = canOpen ? '#FF8C00' : '#555';
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(boxX, boxY, questionBox.width, questionBox.height);
+                    ctx.fillStyle = canOpen ? '#FF4500' : '#333';
+                    ctx.font = 'bold 30px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('?', boxX + 20, boxY + 30);
                 }
-                
-                ctx.fillRect(questionBox.x, questionBox.y, questionBox.width, questionBox.height);
-                ctx.strokeStyle = canOpen ? '#FF8C00' : '#555';
-                ctx.lineWidth = 3;
-                ctx.strokeRect(questionBox.x, questionBox.y, questionBox.width, questionBox.height);
-                ctx.fillStyle = canOpen ? '#FF4500' : '#333';
-                ctx.font = 'bold 30px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('?', questionBox.x + 20, questionBox.y + 30);
             }
 
             // 绘制终点
@@ -1167,6 +1271,9 @@
             if (player.invincible % 4 < 2) { // 无敌闪烁效果
                 drawPlayer(player.x, player.y, player.width, player.height, player.direction);
             }
+            
+            // 绘制特效
+            renderEffects();
 
             ctx.restore();
 
@@ -1425,25 +1532,37 @@
             game.state = 'question';
             const modal = document.getElementById('question-modal');
             const questionText = document.getElementById('question-text');
+            const questionImage = document.getElementById('question-image');
             const answerButtons = document.getElementById('answer-buttons');
             
             const q = questions[currentLevel];
             questionText.textContent = q.question;
+            
+            // 显示问题图片
+            if (q.image) {
+                questionImage.src = q.image;
+                questionImage.style.display = 'block';
+            } else {
+                questionImage.style.display = 'none';
+            }
             
             answerButtons.innerHTML = '';
             q.answers.forEach((answer, index) => {
                 const btn = document.createElement('button');
                 btn.className = 'answer-btn';
                 btn.textContent = answer;
-                btn.onclick = () => checkAnswer(index, btn, q.correct, q.reward);
+                btn.onclick = () => checkAnswer(index, btn, q.correct, q.reward, answer, q.wrongHint);
                 answerButtons.appendChild(btn);
             });
             
             modal.classList.add('active');
         }
 
-        function checkAnswer(index, btn, correct, reward) {
-            if (index === correct) {
+        function checkAnswer(index, btn, correct, reward, selectedAnswer, wrongHint) {
+            const q = questions[currentLevel];
+            
+            // 第一关：任何答案都正确
+            if (currentLevel === 1) {
                 btn.classList.add('correct');
                 game.stars += 3;
                 game.hearts = Math.min(3, game.hearts + 1);
@@ -1452,17 +1571,61 @@
                 if (reward) {
                     player.weapon = reward;
                     const weaponEmoji = reward === '爱之钥匙' ? '🔑' : reward === '守护之盾' ? '🛡️' : '';
-                    showHint(`🎉 获得了 ${weaponEmoji} ${reward}！`, 3000);
+                    showHint(`🎉 答案正确，就是长得像${selectedAnswer}的舜哥，你获得了 ${weaponEmoji} ${reward}！`, 3000);
                 }
                 
                 setTimeout(() => {
                     closeQuestion();
-                }, 1500);
-            } else {
-                btn.classList.add('wrong');
-                setTimeout(() => {
-                    btn.classList.remove('wrong');
-                }, 500);
+                }, 2000);
+            }
+            // 第二关：必须选"我"
+            else if (currentLevel === 2) {
+                if (index === correct) {
+                    btn.classList.add('correct');
+                    game.stars += 3;
+                    game.hearts = Math.min(3, game.hearts + 1);
+                    
+                    // 获得武器
+                    if (reward) {
+                        player.weapon = reward;
+                        const weaponEmoji = reward === '爱之钥匙' ? '🔑' : reward === '守护之盾' ? '🛡️' : '';
+                        showHint(`🎉 果然是双向奔赴的爱情，恭喜你获得了 ${weaponEmoji} ${reward}！`, 3000);
+                    }
+                    
+                    setTimeout(() => {
+                        closeQuestion();
+                    }, 2000);
+                } else {
+                    btn.classList.add('wrong');
+                    showHint(wrongHint || '答案不对哦！', 2000);
+                    setTimeout(() => {
+                        btn.classList.remove('wrong');
+                    }, 500);
+                }
+            }
+            // 其他关卡
+            else {
+                if (index === correct) {
+                    btn.classList.add('correct');
+                    game.stars += 3;
+                    game.hearts = Math.min(3, game.hearts + 1);
+                    
+                    // 获得武器
+                    if (reward) {
+                        player.weapon = reward;
+                        const weaponEmoji = reward === '爱之钥匙' ? '🔑' : reward === '守护之盾' ? '🛡️' : '';
+                        showHint(`🎉 获得了 ${weaponEmoji} ${reward}！`, 3000);
+                    }
+                    
+                    setTimeout(() => {
+                        closeQuestion();
+                    }, 1500);
+                } else {
+                    btn.classList.add('wrong');
+                    setTimeout(() => {
+                        btn.classList.remove('wrong');
+                    }, 500);
+                }
             }
         }
 
@@ -1552,6 +1715,194 @@
             animateFireworks();
         }
 
+        // ==================== 火箭传送动画 ====================
+        function startRocketAnimation() {
+            if (!questionBox) return;
+            
+            questionBox.rocketAnimation = true;
+            questionBox.rocketStartX = questionBox.x;
+            questionBox.rocketStartY = questionBox.y;
+            questionBox.rocketX = questionBox.x;
+            questionBox.rocketY = questionBox.y;
+            questionBox.rocketTargetX = player.x + 100;
+            questionBox.rocketTargetY = player.y - 100;
+            questionBox.rocketProgress = 0;
+            
+            showHint('🚀 宝箱正在传送中...', 2000);
+        }
+        
+        function updateRocketAnimation() {
+            if (!questionBox || !questionBox.rocketAnimation) return;
+            
+            questionBox.rocketProgress += 0.02;
+            
+            if (questionBox.rocketProgress >= 1) {
+                // 动画结束
+                questionBox.rocketAnimation = false;
+                questionBox.x = questionBox.rocketTargetX;
+                questionBox.y = questionBox.rocketTargetY;
+                showHint('📦 宝箱已送达！', 2000);
+            } else {
+                // 使用缓动函数
+                const t = questionBox.rocketProgress;
+                const easeOut = 1 - Math.pow(1 - t, 3);
+                
+                questionBox.rocketX = questionBox.rocketStartX + (questionBox.rocketTargetX - questionBox.rocketStartX) * easeOut;
+                questionBox.rocketY = questionBox.rocketStartY + (questionBox.rocketTargetY - questionBox.rocketStartY) * easeOut;
+                
+                // 添加上下浮动效果
+                questionBox.rocketY += Math.sin(t * Math.PI * 4) * 10;
+            }
+        }
+        
+        function drawRocket(x, y) {
+            ctx.save();
+            
+            // 火箭尾焰
+            ctx.fillStyle = '#FF6347';
+            ctx.beginPath();
+            ctx.moveTo(x, y + 30);
+            ctx.lineTo(x - 8, y + 45);
+            ctx.lineTo(x + 8, y + 45);
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.fillStyle = '#FFA500';
+            ctx.beginPath();
+            ctx.moveTo(x, y + 35);
+            ctx.lineTo(x - 5, y + 45);
+            ctx.lineTo(x + 5, y + 45);
+            ctx.closePath();
+            ctx.fill();
+            
+            // 火箭身体
+            ctx.fillStyle = '#FF4500';
+            ctx.fillRect(x - 10, y, 20, 30);
+            
+            // 火箭头部
+            ctx.fillStyle = '#DC143C';
+            ctx.beginPath();
+            ctx.moveTo(x, y - 15);
+            ctx.lineTo(x - 10, y);
+            ctx.lineTo(x + 10, y);
+            ctx.closePath();
+            ctx.fill();
+            
+            // 火箭窗口
+            ctx.fillStyle = '#87CEEB';
+            ctx.beginPath();
+            ctx.arc(x, y + 10, 5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 火箭翅膀
+            ctx.fillStyle = '#B22222';
+            ctx.beginPath();
+            ctx.moveTo(x - 10, y + 20);
+            ctx.lineTo(x - 18, y + 30);
+            ctx.lineTo(x - 10, y + 30);
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.moveTo(x + 10, y + 20);
+            ctx.lineTo(x + 18, y + 30);
+            ctx.lineTo(x + 10, y + 30);
+            ctx.closePath();
+            ctx.fill();
+            
+            // 火花效果
+            for (let i = 0; i < 3; i++) {
+                ctx.fillStyle = ['#FFD700', '#FFA500', '#FF6347'][i];
+                ctx.beginPath();
+                ctx.arc(x + (Math.random() - 0.5) * 10, y + 45 + Math.random() * 10, Math.random() * 3 + 1, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            ctx.restore();
+        }
+        
+        // ==================== 特效系统 ====================
+        let attackEffects = [];
+        let victoryEffects = [];
+        
+        function createAttackEffect(x, y) {
+            for (let i = 0; i < 20; i++) {
+                attackEffects.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10,
+                    life: 30,
+                    color: ['#FFD700', '#FF69B4', '#FF1493', '#FFA500'][Math.floor(Math.random() * 4)],
+                    size: Math.random() * 5 + 3
+                });
+            }
+        }
+        
+        function createVictoryEffect() {
+            for (let i = 0; i < 50; i++) {
+                victoryEffects.push({
+                    x: canvas.width / 2,
+                    y: canvas.height / 2,
+                    vx: (Math.random() - 0.5) * 15,
+                    vy: (Math.random() - 0.5) * 15,
+                    life: 60,
+                    color: ['#FFD700', '#FF69B4', '#FF1493', '#FFA500', '#00FF00'][Math.floor(Math.random() * 5)],
+                    size: Math.random() * 8 + 5
+                });
+            }
+        }
+        
+        function updateEffects() {
+            // 更新攻击特效
+            for (let i = attackEffects.length - 1; i >= 0; i--) {
+                const e = attackEffects[i];
+                e.x += e.vx;
+                e.y += e.vy;
+                e.vy += 0.3;
+                e.life--;
+                if (e.life <= 0) {
+                    attackEffects.splice(i, 1);
+                }
+            }
+            
+            // 更新胜利特效
+            for (let i = victoryEffects.length - 1; i >= 0; i--) {
+                const e = victoryEffects[i];
+                e.x += e.vx;
+                e.y += e.vy;
+                e.vy += 0.2;
+                e.life--;
+                if (e.life <= 0) {
+                    victoryEffects.splice(i, 1);
+                }
+            }
+        }
+        
+        function renderEffects() {
+            ctx.save();
+            
+            // 渲染攻击特效
+            attackEffects.forEach(e => {
+                ctx.globalAlpha = e.life / 30;
+                ctx.fillStyle = e.color;
+                ctx.beginPath();
+                ctx.arc(e.x, e.y, e.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            // 渲染胜利特效
+            victoryEffects.forEach(e => {
+                ctx.globalAlpha = e.life / 60;
+                ctx.fillStyle = e.color;
+                ctx.beginPath();
+                ctx.arc(e.x, e.y, e.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            ctx.restore();
+        }
+        
         // ==================== 提示系统 ====================
         let currentHint = null;
         
@@ -1593,6 +1944,7 @@
         function gameLoop() {
             update();
             updateHint();
+            updateEffects();
             render();
             requestAnimationFrame(gameLoop);
         }
