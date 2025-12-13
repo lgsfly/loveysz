@@ -371,19 +371,27 @@
         const canvas = document.getElementById('game-canvas');
         const ctx = canvas.getContext('2d');
 
-        // 设置画布大小
+        // 设置画布大小 - 适配手机竖屏
         function resizeCanvas() {
-            const maxWidth = 800;
-            const maxHeight = 600;
             const windowWidth = window.innerWidth;
             const windowHeight = window.innerHeight;
             
-            if (windowWidth / windowHeight > maxWidth / maxHeight) {
-                canvas.height = Math.min(windowHeight, maxHeight);
-                canvas.width = canvas.height * (maxWidth / maxHeight);
-            } else {
-                canvas.width = Math.min(windowWidth, maxWidth);
-                canvas.height = canvas.width * (maxHeight / maxWidth);
+            // 手机竖屏模式
+            if (windowWidth < windowHeight) {
+                canvas.width = windowWidth;
+                canvas.height = windowHeight;
+            } 
+            // 横屏或电脑模式
+            else {
+                const maxWidth = 800;
+                const maxHeight = 600;
+                if (windowWidth / windowHeight > maxWidth / maxHeight) {
+                    canvas.height = Math.min(windowHeight, maxHeight);
+                    canvas.width = canvas.height * (maxWidth / maxHeight);
+                } else {
+                    canvas.width = Math.min(windowWidth, maxWidth);
+                    canvas.height = canvas.width * (maxHeight / maxWidth);
+                }
             }
         }
 
@@ -410,14 +418,14 @@
         // ==================== 玩家 ====================
         const player = {
             x: 100,
-            y: 480, // 初始位置在地面上
+            y: 100, // 初始位置，会在loadLevel时重新设置
             width: 40,
             height: 60,
             vx: 0,
             vy: 0,
             speed: 4,
             jumpForce: -12,
-            onGround: true,
+            onGround: false,
             invincible: 0,
             direction: 1, // 1=右, -1=左
             weapon: null // 当前持有的武器
@@ -436,111 +444,159 @@
 
         // ==================== 关卡数据 ====================
         let currentLevel = 1;
+        
+        // 动态获取地面高度
+        function getGroundY() {
+            return canvas.height - 80;
+        }
+        
         const levels = {
             1: {
                 name: "💖 寻找钥匙碎片",
                 description: "收集3个钥匙碎片，回答问题获得爱之钥匙！",
                 width: 3000,
-                platforms: [
-                    { x: 0, y: 550, width: 3000, height: 50 },
-                    { x: 300, y: 450, width: 200, height: 20 },
-                    { x: 600, y: 380, width: 150, height: 20 },
-                    { x: 900, y: 320, width: 200, height: 20 },
-                    { x: 1200, y: 380, width: 150, height: 20 },
-                    { x: 1500, y: 450, width: 200, height: 20 },
-                    { x: 1800, y: 380, width: 200, height: 20 },
-                    { x: 2100, y: 320, width: 150, height: 20 },
-                    { x: 2400, y: 400, width: 200, height: 20 },
-                ],
-                enemies: [
-                    { x: 500, y: 520, type: 'walk', speed: 0.8 },
-                    { x: 800, y: 520, type: 'walk', speed: 0.8 },
-                    { x: 1300, y: 520, type: 'walk', speed: 0.8 },
-                    { x: 1900, y: 520, type: 'walk', speed: 0.8 },
-                    { x: 2500, y: 520, type: 'walk', speed: 0.8 },
-                ],
-                items: [
-                    { x: 650, y: 320, type: 'keyFragment' },
-                    { x: 1250, y: 320, type: 'keyFragment' },
-                    { x: 2150, y: 260, type: 'keyFragment' },
-                    { x: 400, y: 400, type: 'star' },
-                    { x: 950, y: 260, type: 'star' },
-                    { x: 1550, y: 390, type: 'star' },
-                    { x: 1850, y: 320, type: 'star' },
-                ],
-                questionBox: { x: 2700, y: 330, asked: false, needsFragments: 3 },
-                goal: { x: 2850, y: 480 },
+                getPlatforms: () => {
+                    const groundY = getGroundY();
+                    return [
+                        { x: 0, y: groundY, width: 3000, height: 80 },
+                        { x: 300, y: groundY - 150, width: 200, height: 20 },
+                        { x: 600, y: groundY - 220, width: 150, height: 20 },
+                        { x: 900, y: groundY - 280, width: 200, height: 20 },
+                        { x: 1200, y: groundY - 220, width: 150, height: 20 },
+                        { x: 1500, y: groundY - 150, width: 200, height: 20 },
+                        { x: 1800, y: groundY - 220, width: 200, height: 20 },
+                        { x: 2100, y: groundY - 280, width: 150, height: 20 },
+                        { x: 2400, y: groundY - 200, width: 200, height: 20 },
+                    ];
+                },
+                getEnemies: () => {
+                    const groundY = getGroundY();
+                    return [
+                        { x: 500, y: groundY - 50, type: 'walk', speed: 0.8 },
+                        { x: 800, y: groundY - 50, type: 'walk', speed: 0.8 },
+                        { x: 1300, y: groundY - 50, type: 'walk', speed: 0.8 },
+                        { x: 1900, y: groundY - 50, type: 'walk', speed: 0.8 },
+                        { x: 2500, y: groundY - 50, type: 'walk', speed: 0.8 },
+                    ];
+                },
+                getItems: () => {
+                    const groundY = getGroundY();
+                    return [
+                        { x: 650, y: groundY - 280, type: 'keyFragment' },
+                        { x: 1250, y: groundY - 280, type: 'keyFragment' },
+                        { x: 2150, y: groundY - 340, type: 'keyFragment' },
+                        { x: 400, y: groundY - 200, type: 'star' },
+                        { x: 950, y: groundY - 340, type: 'star' },
+                        { x: 1550, y: groundY - 210, type: 'star' },
+                        { x: 1850, y: groundY - 280, type: 'star' },
+                    ];
+                },
+                getQuestionBox: () => {
+                    const groundY = getGroundY();
+                    return { x: 2700, y: groundY - 270, asked: false, needsFragments: 3 };
+                },
+                getGoal: () => {
+                    const groundY = getGroundY();
+                    return { x: 2850, y: groundY - 80 };
+                },
                 specialMechanic: "收集钥匙碎片"
             },
             2: {
                 name: "🔐 开启封印之门",
                 description: "使用爱之钥匙打开封印之门，获得守护之盾！",
                 width: 3500,
-                platforms: [
-                    { x: 0, y: 550, width: 3500, height: 50 },
-                    { x: 250, y: 450, width: 100, height: 20 },
-                    { x: 450, y: 380, width: 100, height: 20 },
-                    { x: 650, y: 320, width: 100, height: 20 },
-                    { x: 850, y: 380, width: 150, height: 20 },
-                    { x: 1100, y: 320, width: 100, height: 20 },
-                    { x: 1350, y: 380, width: 150, height: 20 },
-                    { x: 1650, y: 300, width: 200, height: 20 },
-                    { x: 2000, y: 380, width: 150, height: 20 },
-                    { x: 2300, y: 320, width: 100, height: 20 },
-                    { x: 2600, y: 380, width: 200, height: 20 },
-                    { x: 2950, y: 450, width: 200, height: 20 },
-                ],
-                enemies: [
-                    { x: 400, y: 520, type: 'walk', speed: 1.0 },
-                    { x: 700, y: 520, type: 'walk', speed: 1.0 },
-                    { x: 1000, y: 520, type: 'walk', speed: 1.0 },
-                    { x: 1500, y: 520, type: 'walk', speed: 1.0 },
-                    { x: 1800, y: 520, type: 'walk', speed: 1.0 },
-                    { x: 2200, y: 520, type: 'walk', speed: 1.0 },
-                    { x: 2700, y: 520, type: 'walk', speed: 1.0 },
-                ],
-                items: [
-                    { x: 300, y: 390, type: 'star' },
-                    { x: 500, y: 320, type: 'star' },
-                    { x: 700, y: 260, type: 'star' },
-                    { x: 900, y: 320, type: 'star' },
-                    { x: 1150, y: 260, type: 'star' },
-                    { x: 1400, y: 320, type: 'star' },
-                    { x: 2050, y: 320, type: 'star' },
-                    { x: 2350, y: 260, type: 'star' },
-                ],
-                lockedDoor: { x: 1700, y: 370, width: 60, height: 100, opened: false },
-                questionBox: { x: 1750, y: 230, asked: false, needsKey: true },
-                goal: { x: 3300, y: 480 },
+                getPlatforms: () => {
+                    const groundY = getGroundY();
+                    return [
+                        { x: 0, y: groundY, width: 3500, height: 80 },
+                        { x: 250, y: groundY - 150, width: 100, height: 20 },
+                        { x: 450, y: groundY - 220, width: 100, height: 20 },
+                        { x: 650, y: groundY - 280, width: 100, height: 20 },
+                        { x: 850, y: groundY - 220, width: 150, height: 20 },
+                        { x: 1100, y: groundY - 280, width: 100, height: 20 },
+                        { x: 1350, y: groundY - 220, width: 150, height: 20 },
+                        { x: 1650, y: groundY - 300, width: 200, height: 20 },
+                        { x: 2000, y: groundY - 220, width: 150, height: 20 },
+                        { x: 2300, y: groundY - 280, width: 100, height: 20 },
+                        { x: 2600, y: groundY - 220, width: 200, height: 20 },
+                        { x: 2950, y: groundY - 150, width: 200, height: 20 },
+                    ];
+                },
+                getEnemies: () => {
+                    const groundY = getGroundY();
+                    return [
+                        { x: 400, y: groundY - 50, type: 'walk', speed: 1.0 },
+                        { x: 700, y: groundY - 50, type: 'walk', speed: 1.0 },
+                        { x: 1000, y: groundY - 50, type: 'walk', speed: 1.0 },
+                        { x: 1500, y: groundY - 50, type: 'walk', speed: 1.0 },
+                        { x: 1800, y: groundY - 50, type: 'walk', speed: 1.0 },
+                        { x: 2200, y: groundY - 50, type: 'walk', speed: 1.0 },
+                        { x: 2700, y: groundY - 50, type: 'walk', speed: 1.0 },
+                    ];
+                },
+                getItems: () => {
+                    const groundY = getGroundY();
+                    return [
+                        { x: 300, y: groundY - 210, type: 'star' },
+                        { x: 500, y: groundY - 280, type: 'star' },
+                        { x: 700, y: groundY - 340, type: 'star' },
+                        { x: 900, y: groundY - 280, type: 'star' },
+                        { x: 1150, y: groundY - 340, type: 'star' },
+                        { x: 1400, y: groundY - 280, type: 'star' },
+                        { x: 2050, y: groundY - 280, type: 'star' },
+                        { x: 2350, y: groundY - 340, type: 'star' },
+                    ];
+                },
+                getLockedDoor: () => {
+                    const groundY = getGroundY();
+                    return { x: 1700, y: groundY - 230, width: 60, height: 100, opened: false };
+                },
+                getQuestionBox: () => {
+                    const groundY = getGroundY();
+                    return { x: 1750, y: groundY - 370, asked: false, needsKey: true };
+                },
+                getGoal: () => {
+                    const groundY = getGroundY();
+                    return { x: 3300, y: groundY - 80 };
+                },
                 specialMechanic: "打开封印之门"
             },
             3: {
                 name: "🛡️ 决战时光守护者",
                 description: "用守护之盾抵挡攻击，击败BOSS！",
                 width: 1200,
-                platforms: [
-                    { x: 0, y: 550, width: 1200, height: 50 },
-                    { x: 150, y: 450, width: 150, height: 20 },
-                    { x: 500, y: 380, width: 200, height: 20 },
-                    { x: 900, y: 450, width: 150, height: 20 },
-                ],
-                enemies: [],
-                items: [
-                    { x: 200, y: 390, type: 'heart' },
-                    { x: 950, y: 390, type: 'heart' },
-                ],
-                boss: {
-                    x: 600,
-                    y: 300,
-                    width: 80,
-                    height: 80,
-                    hp: 10,
-                    maxHp: 10,
-                    vx: 2,
-                    attackCooldown: 0,
-                    projectiles: []
+                getPlatforms: () => {
+                    const groundY = getGroundY();
+                    return [
+                        { x: 0, y: groundY, width: 1200, height: 80 },
+                        { x: 150, y: groundY - 150, width: 150, height: 20 },
+                        { x: 500, y: groundY - 220, width: 200, height: 20 },
+                        { x: 900, y: groundY - 150, width: 150, height: 20 },
+                    ];
                 },
-                goal: null,
+                getEnemies: () => [],
+                getItems: () => {
+                    const groundY = getGroundY();
+                    return [
+                        { x: 200, y: groundY - 210, type: 'heart' },
+                        { x: 950, y: groundY - 210, type: 'heart' },
+                    ];
+                },
+                getBoss: () => {
+                    const groundY = getGroundY();
+                    return {
+                        x: 600,
+                        y: groundY - 300,
+                        width: 80,
+                        height: 80,
+                        hp: 10,
+                        maxHp: 10,
+                        vx: 2,
+                        attackCooldown: 0,
+                        projectiles: []
+                    };
+                },
+                getGoal: () => null,
                 specialMechanic: "用盾牌抵挡"
             }
         };
@@ -559,33 +615,41 @@
             currentLevel = levelNum;
             const levelData = levels[levelNum];
             
-            platforms = levelData.platforms.map(p => ({...p}));
-            enemies = levelData.enemies.map(e => ({
+            // 使用动态函数获取关卡数据
+            platforms = levelData.getPlatforms ? levelData.getPlatforms().map(p => ({...p})) : [];
+            enemies = levelData.getEnemies ? levelData.getEnemies().map(e => ({
                 ...e,
                 width: 32,
                 height: 32,
                 vx: e.type === 'walk' ? -(e.speed || 2) : 0,
                 alive: true
-            }));
-            items = levelData.items.map(i => ({
+            })) : [];
+            items = levelData.getItems ? levelData.getItems().map(i => ({
                 ...i,
                 width: i.type === 'keyFragment' ? 30 : 24,
                 height: i.type === 'keyFragment' ? 30 : 24,
                 collected: false,
                 bounce: 0
-            }));
+            })) : [];
             
-            questionBox = levelData.questionBox ? {...levelData.questionBox, width: 40, height: 40} : null;
-            goal = levelData.goal ? {...levelData.goal, width: 60, height: 60} : null;
-            boss = levelData.boss ? {...levelData.boss} : null;
-            lockedDoor = levelData.lockedDoor ? {...levelData.lockedDoor} : null;
+            const qBox = levelData.getQuestionBox ? levelData.getQuestionBox() : null;
+            questionBox = qBox ? {...qBox, width: 40, height: 40} : null;
+            
+            const g = levelData.getGoal ? levelData.getGoal() : null;
+            goal = g ? {...g, width: 60, height: 60} : null;
+            
+            boss = levelData.getBoss ? levelData.getBoss() : null;
+            
+            const lDoor = levelData.getLockedDoor ? levelData.getLockedDoor() : null;
+            lockedDoor = lDoor ? {...lDoor} : null;
             
             // 重置关卡特定变量
             keyFragments = 0;
             
             // 重置玩家位置 - 放在地面上
+            const groundY = getGroundY();
             player.x = 100;
-            player.y = 480; // 改为在地面上的位置（550 - 60 - 10）
+            player.y = groundY - player.height - 5;
             player.vx = 0;
             player.vy = 0;
             player.onGround = true;
@@ -939,18 +1003,25 @@
         }
 
         function takeDamage() {
+            if (game.hearts <= 0) return; // 防止重复调用
+            
             game.hearts--;
             player.invincible = 60;
-            player.x = 100;
-            player.y = 480; // 重生在地面上
-            player.vx = 0;
-            player.vy = 0;
-            player.onGround = true;
-            game.camera.x = 0;
             
             if (game.hearts <= 0) {
-                alert('游戏结束！再来一次吧！');
-                restartGame();
+                setTimeout(() => {
+                    alert('游戏结束！再来一次吧！');
+                    restartGame();
+                }, 100);
+            } else {
+                // 重生在地面上
+                const groundY = getGroundY();
+                player.x = 100;
+                player.y = groundY - player.height - 5;
+                player.vx = 0;
+                player.vy = 0;
+                player.onGround = true;
+                game.camera.x = 0;
             }
         }
 
