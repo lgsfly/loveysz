@@ -233,8 +233,9 @@
         .question-image {
             width: 100%;
             max-width: 300px;
-            height: 200px;
-            object-fit: cover;
+            max-height: 250px;
+            object-fit: contain; /* 保持图片完整不裁剪不变形 */
+            background: white; /* 白色背景 */
             border-radius: 10px;
             margin-bottom: 20px;
             border: 3px solid #333;
@@ -314,10 +315,15 @@
             border-radius: 20px;
             border: 4px solid #333;
             max-width: 500px;
+            width: 90%;
             text-align: center;
             line-height: 2;
             font-size: 16px;
             margin: 20px 0;
+        }
+        
+        .ending-message p {
+            margin: 10px 0;
         }
 
         .fireworks {
@@ -327,6 +333,7 @@
             width: 100%;
             height: 100%;
             pointer-events: none;
+            z-index: -1; /* 放到背景层，不遮挡视频 */
         }
 
         /* 像素字体样式 */
@@ -335,21 +342,82 @@
             letter-spacing: 2px;
         }
         
+        /* 提示弹窗 */
+        .hint-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 30px 40px;
+            border-radius: 15px;
+            border: 3px solid #FFD700;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            z-index: 3000;
+            max-width: 80%;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            display: none;
+            pointer-events: auto;
+            cursor: pointer;
+        }
+        
+        .hint-modal.active {
+            display: block;
+            animation: hintPop 0.3s;
+        }
+        
+        @keyframes hintPop {
+            0% { transform: translate(-50%, -50%) scale(0); }
+            50% { transform: translate(-50%, -50%) scale(1.1); }
+            100% { transform: translate(-50%, -50%) scale(1); }
+        }
+        
+        .hint-modal::after {
+            content: '(点击关闭)';
+            display: block;
+            margin-top: 10px;
+            font-size: 12px;
+            opacity: 0.7;
+        }
+        
         /* 胜利照片 */
         .victory-photo {
             width: 80%;
             max-width: 400px;
-            height: auto;
+            max-height: 300px;
+            object-fit: contain; /* 保持图片完整不裁剪 */
+            background: #fff;
             border-radius: 20px;
             border: 5px solid #FFD700;
             margin: 20px 0;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
             animation: photoZoom 0.5s;
+            display: block;
         }
         
         @keyframes photoZoom {
             0% { transform: scale(0); }
             50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        /* 胜利视频 */
+        .victory-video {
+            width: 90%;
+            max-width: 500px;
+            border-radius: 20px;
+            border: 5px solid #FFD700;
+            margin: 20px 0;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            animation: videoZoom 0.5s;
+        }
+        
+        @keyframes videoZoom {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.05); }
             100% { transform: scale(1); }
         }
     </style>
@@ -402,20 +470,34 @@
         <div class="question-title" id="question-text"></div>
         <div id="answer-buttons"></div>
     </div>
+    
+    <!-- 提示弹窗 -->
+    <div class="hint-modal" id="hint-modal" onclick="closeHint()">
+        <div id="hint-text"></div>
+    </div>
 
     <!-- 结局界面 -->
     <div class="ending-screen" id="ending-screen">
         <h1 class="ending-title">🎉 生日快乐 🎉</h1>
-        <img class="victory-photo" id="victory-photo" src="second.jpg" alt="胜利照片">
+        <video class="victory-video" id="victory-video" controls autoplay loop>
+            <source src="loveyou.mp4" type="video/mp4">
+            您的浏览器不支持视频播放
+        </video>
         <div class="ending-message">
             <p style="font-size: 18px; color: #f5576c; font-weight: bold;">女神大人，你拯救了银河系，</p>
-            <p style="font-size: 18px; color: #f5576c; font-weight: bold;">获得了来自lgsloveysz星球的生日礼物(´▽`ʃ♡ƪ)</p>
+            <p style="font-size: 18px; color: #f5576c; font-weight: bold;">获得了来自lgsloveysz星球的生日礼物</p>
+            <p style="font-size: 18px; color: #f5576c; font-weight: bold;">(´▽`ʃ♡ƪ)</p>
             <p style="margin-top: 20px; font-size: 20px; color: #FF1493; font-weight: bold;">赶紧去领取吧！</p>
-            <p style="margin-top: 30px;">⭐ 你收集了 <span id="final-stars">0</span> 颗星星！</p>
+            <p style="margin-top: 30px; color: #333;">⭐ 你收集了 <span id="final-stars">0</span> 颗星星！</p>
         </div>
         <button class="start-btn" onclick="restartGame()">再玩一次</button>
         <canvas class="fireworks" id="fireworks-canvas"></canvas>
     </div>
+    
+    <!-- 预加载视频 -->
+    <video id="preload-video" style="display: none;" preload="auto">
+        <source src="loveyou.mp4" type="video/mp4">
+    </video>
 
     <script>
         // ==================== 游戏配置 ====================
@@ -706,8 +788,7 @@
             player.onGround = true;
             game.camera.x = 0;
             
-            // 显示关卡描述
-            showHint(levelData.description, 3000);
+            // 不显示关卡描述
         }
 
         // ==================== 问题库 ====================
@@ -725,7 +806,7 @@
                 correct: 2,
                 reward: "守护之盾",
                 wrongHint: "我建议你用你聪慧的脑袋再想想",
-                image: "second.jpg"
+                image: "avatar.jpg"
             },
             3: {
                 question: "💕 我们的未来会是什么样？",
@@ -911,16 +992,13 @@
                 if (checkCollision(player, item) && !item.collected) {
                     item.collected = true;
                     
-                    // 添加收集音效提示和视觉反馈
+                    // 添加收集音效提示和视觉反馈（不显示弹窗）
                     if (item.type === 'star') {
                         game.stars += 1;
-                        showHint('⭐ +1', 1000);
                     } else if (item.type === 'heart') {
                         game.hearts = Math.min(3, game.hearts + 1);
-                        showHint('💖 生命恢复！', 1500);
                     } else if (item.type === 'keyFragment') {
                         keyFragments += 1;
-                        showHint(`🔑 获得钥匙碎片！ (${keyFragments}/3)`, 2000);
                     }
                 }
             });
@@ -929,19 +1007,11 @@
             if (questionBox && !questionBox.asked && checkCollision(player, questionBox)) {
                 // 关卡1：需要收集足够的钥匙碎片
                 if (questionBox.needsFragments && keyFragments < questionBox.needsFragments) {
-                    if (!questionBox.hintShown) {
-                        showHint(`还需要收集 ${questionBox.needsFragments - keyFragments} 个钥匙碎片！`, 2000);
-                        questionBox.hintShown = true;
-                        setTimeout(() => { questionBox.hintShown = false; }, 3000);
-                    }
+                    // 不显示提示
                 }
                 // 关卡2：需要钥匙才能打开
                 else if (questionBox.needsKey && player.weapon !== '爱之钥匙') {
-                    if (!questionBox.hintShown) {
-                        showHint('需要爱之钥匙才能打开这个箱子！', 2000);
-                        questionBox.hintShown = true;
-                        setTimeout(() => { questionBox.hintShown = false; }, 3000);
-                    }
+                    // 不显示提示
                 }
                 else {
                     showQuestion();
@@ -954,7 +1024,6 @@
                 if (checkCollision(player, lockedDoor)) {
                     if (player.weapon === '爱之钥匙') {
                         lockedDoor.opened = true;
-                        showHint('🔓 封印之门已打开！', 2000);
                         
                         // 启动火箭传送宝箱动画
                         if (questionBox && !questionBox.asked) {
@@ -964,11 +1033,6 @@
                         // 阻挡玩家
                         if (player.x + player.width > lockedDoor.x && player.x < lockedDoor.x + lockedDoor.width / 2) {
                             player.x = lockedDoor.x - player.width;
-                        }
-                        if (!lockedDoor.hintShown) {
-                            showHint('🔒 需要爱之钥匙才能打开这扇门！', 1500);
-                            lockedDoor.hintShown = true;
-                            setTimeout(() => { lockedDoor.hintShown = false; }, 2000);
                         }
                     }
                 }
@@ -1018,7 +1082,7 @@
                         boss.projectiles.splice(i, 1);
                         // 如果有盾牌，可以抵挡
                         if (player.weapon === '守护之盾') {
-                            showHint('🛡️ 盾牌抵挡了攻击！', 1000);
+                            // 盾牌抵挡，不显示提示
                         } else if (player.invincible === 0) {
                             takeDamage();
                         }
@@ -1038,8 +1102,6 @@
                         // 创建攻击特效
                         createAttackEffect(boss.x + boss.width / 2, boss.y + boss.height / 2);
                         
-                        showHint(`💥 BOSS HP: ${boss.hp}/${boss.maxHp}`, 1000);
-                        
                         if (boss.hp <= 0) {
                             // 创建胜利特效
                             createVictoryEffect();
@@ -1050,7 +1112,6 @@
                     } else if (player.invincible === 0) {
                         // 如果有盾牌，减少伤害
                         if (player.weapon === '守护之盾') {
-                            showHint('🛡️ 盾牌减少了伤害！', 1000);
                             player.invincible = 60;
                         } else {
                             takeDamage();
@@ -1571,7 +1632,7 @@
                 if (reward) {
                     player.weapon = reward;
                     const weaponEmoji = reward === '爱之钥匙' ? '🔑' : reward === '守护之盾' ? '🛡️' : '';
-                    showHint(`🎉 答案正确，就是长得像${selectedAnswer}的舜哥，你获得了 ${weaponEmoji} ${reward}！`, 3000);
+                    showHint(`🎉 答案正确，就是长得像${selectedAnswer}的舜哥，你获得了 ${weaponEmoji} ${reward}！`, 3000, true);
                 }
                 
                 setTimeout(() => {
@@ -1589,7 +1650,7 @@
                     if (reward) {
                         player.weapon = reward;
                         const weaponEmoji = reward === '爱之钥匙' ? '🔑' : reward === '守护之盾' ? '🛡️' : '';
-                        showHint(`🎉 果然是双向奔赴的爱情，恭喜你获得了 ${weaponEmoji} ${reward}！`, 3000);
+                        showHint(`🎉 果然是双向奔赴的爱情，恭喜你获得了 ${weaponEmoji} ${reward}！`, 3000, true);
                     }
                     
                     setTimeout(() => {
@@ -1597,7 +1658,7 @@
                     }, 2000);
                 } else {
                     btn.classList.add('wrong');
-                    showHint(wrongHint || '答案不对哦！', 2000);
+                    showHint(wrongHint || '答案不对哦！', 2000, true);
                     setTimeout(() => {
                         btn.classList.remove('wrong');
                     }, 500);
@@ -1614,7 +1675,7 @@
                     if (reward) {
                         player.weapon = reward;
                         const weaponEmoji = reward === '爱之钥匙' ? '🔑' : reward === '守护之盾' ? '🛡️' : '';
-                        showHint(`🎉 获得了 ${weaponEmoji} ${reward}！`, 3000);
+                        showHint(`🎉 获得了 ${weaponEmoji} ${reward}！`, 3000, true);
                     }
                     
                     setTimeout(() => {
@@ -1727,8 +1788,6 @@
             questionBox.rocketTargetX = player.x + 100;
             questionBox.rocketTargetY = player.y - 100;
             questionBox.rocketProgress = 0;
-            
-            showHint('🚀 宝箱正在传送中...', 2000);
         }
         
         function updateRocketAnimation() {
@@ -1741,7 +1800,6 @@
                 questionBox.rocketAnimation = false;
                 questionBox.x = questionBox.rocketTargetX;
                 questionBox.y = questionBox.rocketTargetY;
-                showHint('📦 宝箱已送达！', 2000);
             } else {
                 // 使用缓动函数
                 const t = questionBox.rocketProgress;
@@ -1905,39 +1963,46 @@
         
         // ==================== 提示系统 ====================
         let currentHint = null;
+        let hintTimeout = null;
         
-        function showHint(text, duration = 2000) {
-            currentHint = {
-                text: text,
-                time: duration,
-                alpha: 1
-            };
+        function showHint(text, duration = 2000, forceShow = false) {
+            // 只有强制显示时才显示提示
+            if (!forceShow) {
+                return;
+            }
+            
+            const hintModal = document.getElementById('hint-modal');
+            const hintText = document.getElementById('hint-text');
+            
+            hintText.textContent = text;
+            hintModal.classList.add('active');
+            
+            // 清除之前的定时器
+            if (hintTimeout) {
+                clearTimeout(hintTimeout);
+            }
+            
+            // 自动关闭
+            hintTimeout = setTimeout(() => {
+                closeHint();
+            }, duration);
+        }
+        
+        function closeHint() {
+            const hintModal = document.getElementById('hint-modal');
+            hintModal.classList.remove('active');
+            if (hintTimeout) {
+                clearTimeout(hintTimeout);
+                hintTimeout = null;
+            }
         }
         
         function updateHint() {
-            if (currentHint) {
-                currentHint.time -= 16; // 假设60fps，每帧约16ms
-                if (currentHint.time <= 0) {
-                    currentHint = null;
-                } else if (currentHint.time < 500) {
-                    // 最后500ms淡出
-                    currentHint.alpha = currentHint.time / 500;
-                }
-            }
+            // 不再需要更新，改用HTML弹窗
         }
         
         function renderHint() {
-            if (currentHint) {
-                ctx.save();
-                ctx.globalAlpha = currentHint.alpha;
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-                ctx.fillRect(canvas.width / 2 - 100, 50, 200, 40);
-                ctx.fillStyle = 'white';
-                ctx.font = 'bold 16px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText(currentHint.text, canvas.width / 2, 75);
-                ctx.restore();
-            }
+            // 提示改为HTML弹窗显示，不在canvas上绘制
         }
 
         // ==================== 游戏主循环 ====================
