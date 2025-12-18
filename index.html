@@ -454,7 +454,7 @@
     <!-- 结局界面 -->
     <div class="ending-screen" id="ending-screen">
         <h1 class="ending-title">🎉 生日快乐 🎉</h1>
-        <video class="victory-video" id="victory-video" controls loop playsinline webkit-playsinline></video>
+        <video class="victory-video" id="victory-video" controls loop playsinline webkit-playsinline muted>
             <source src="loveyou.mp4" type="video/mp4">
             您的浏览器不支持视频播放
         </video>
@@ -470,7 +470,7 @@
     </div>
     
     <!-- 预加载视频 -->
-    <video id="preload-video" style="display: none;" preload="auto" playsinline webkit-playsinline></video>
+    <video id="preload-video" style="display: none;" preload="auto" playsinline webkit-playsinline muted>
         <source src="loveyou.mp4" type="video/mp4">
     </video>
 
@@ -1673,19 +1673,28 @@
             document.getElementById('final-stars').textContent = game.stars;
             document.getElementById('ending-screen').classList.add('active');
             
-            // 尝试播放视频（兼容iOS和Android）
+            // 尝试播放视频（兼容所有平台）
             const video = document.getElementById('victory-video');
             if (video) {
                 // 重置视频到开始位置
                 video.currentTime = 0;
                 
-                // 尝试播放，处理可能的错误
+                // 先静音播放（自动播放策略要求）
+                video.muted = true;
+                
+                // 尝试播放
                 const playPromise = video.play();
                 if (playPromise !== undefined) {
-                    playPromise.catch(error => {
+                    playPromise.then(() => {
+                        // 播放成功后，延迟取消静音（让用户可以听到声音）
+                        setTimeout(() => {
+                            video.muted = false;
+                        }, 100);
+                    }).catch(error => {
                         console.log('视频自动播放失败，需要用户交互:', error);
-                        // 如果自动播放失败，显示播放按钮提示
+                        // 如果自动播放失败，确保显示控制条
                         video.controls = true;
+                        video.muted = false; // 取消静音，让用户可以手动播放带声音的视频
                     });
                 }
             }
