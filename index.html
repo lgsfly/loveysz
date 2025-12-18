@@ -111,31 +111,7 @@
             background: rgba(255, 107, 107, 1);
         }
         
-        /* 方向键容器 - 支持同时按跳跃 */
-        .direction-pad {
-            position: relative;
-            width: 140px;
-            height: 140px;
-        }
-        
-        .direction-pad .control-btn {
-            position: absolute;
-        }
-        
-        .direction-pad #btn-left {
-            left: 0;
-            top: 40px;
-        }
-        
-        .direction-pad #btn-right {
-            right: 0;
-            top: 40px;
-        }
-        
-        .direction-pad #btn-up {
-            left: 40px;
-            top: 0;
-        }
+
 
         /* 开始界面 */
         .start-screen {
@@ -441,8 +417,7 @@
 
         <!-- 移动控制 -->
         <div class="controls">
-            <div class="direction-pad">
-                <div class="control-btn" id="btn-up">↑</div>
+            <div class="control-group">
                 <div class="control-btn" id="btn-left">←</div>
                 <div class="control-btn" id="btn-right">→</div>
             </div>
@@ -479,15 +454,15 @@
     <!-- 结局界面 -->
     <div class="ending-screen" id="ending-screen">
         <h1 class="ending-title">🎉 生日快乐 🎉</h1>
-        <video class="victory-video" id="victory-video" controls autoplay loop>
+        <video class="victory-video" id="victory-video" controls loop playsinline webkit-playsinline></video>
             <source src="loveyou.mp4" type="video/mp4">
             您的浏览器不支持视频播放
         </video>
         <div class="ending-message">
-            <p style="font-size: 18px; color: #f5576c; font-weight: bold;">女神大人，你拯救了银河系，</p>
-            <p style="font-size: 18px; color: #f5576c; font-weight: bold;">获得了来自lgsloveysz星球的生日礼物</p>
+            <p style="font-size: 18px; color: #f5576c; font-weight: bold;">女神大人，你拯救了银河系</p>
+            <p style="font-size: 18px; color: #f5576c; font-weight: bold;">请观赏来自唱跳俱佳的女神守护者的祝贺</p>
             <p style="font-size: 18px; color: #f5576c; font-weight: bold;">(´▽`ʃ♡ƪ)</p>
-            <p style="margin-top: 20px; font-size: 20px; color: #FF1493; font-weight: bold;">赶紧去领取吧！</p>
+            <p style="margin-top: 20px; font-size: 20px; color: #FF1493; font-weight: bold;">赶紧去点击播放吧，哈哈哈！</p>
             <p style="margin-top: 30px; color: #333;">⭐ 你收集了 <span id="final-stars">0</span> 颗星星！</p>
         </div>
         <button class="start-btn" onclick="restartGame()">再玩一次</button>
@@ -495,7 +470,7 @@
     </div>
     
     <!-- 预加载视频 -->
-    <video id="preload-video" style="display: none;" preload="auto">
+    <video id="preload-video" style="display: none;" preload="auto" playsinline webkit-playsinline></video>
         <source src="loveyou.mp4" type="video/mp4">
     </video>
 
@@ -861,17 +836,7 @@
             }
         });
         
-        // 上方向键也可以跳跃
-        document.getElementById('btn-up').addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            if (player.onGround && game.state === 'playing') {
-                player.vy = player.jumpForce;
-            }
-        });
-        
-        document.getElementById('btn-up').addEventListener('touchend', (e) => {
-            e.preventDefault();
-        });
+
 
         // 鼠标控制（电脑端）
         document.getElementById('btn-left').addEventListener('mousedown', () => game.touchControls.left = true);
@@ -882,10 +847,7 @@
             if (player.onGround && game.state === 'playing') player.vy = player.jumpForce;
         });
         
-        // 上方向键鼠标控制
-        document.getElementById('btn-up').addEventListener('mousedown', () => {
-            if (player.onGround && game.state === 'playing') player.vy = player.jumpForce;
-        });
+
 
         // ==================== 碰撞检测 ====================
         function checkCollision(rect1, rect2) {
@@ -1710,6 +1672,24 @@
             game.state = 'ending';
             document.getElementById('final-stars').textContent = game.stars;
             document.getElementById('ending-screen').classList.add('active');
+            
+            // 尝试播放视频（兼容iOS和Android）
+            const video = document.getElementById('victory-video');
+            if (video) {
+                // 重置视频到开始位置
+                video.currentTime = 0;
+                
+                // 尝试播放，处理可能的错误
+                const playPromise = video.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(error => {
+                        console.log('视频自动播放失败，需要用户交互:', error);
+                        // 如果自动播放失败，显示播放按钮提示
+                        video.controls = true;
+                    });
+                }
+            }
+            
             startFireworks();
         }
 
